@@ -41,6 +41,7 @@ export function DataTable<T extends { id: string }>({
 }: DataTableProps<T>) {
   const getSortIcon = (field: keyof T) => {
     if (sortBy !== field) return null;
+    if (!sortOrder) return null;
     return sortOrder === "asc" ? (
       <ChevronUp className="h-4 w-4 inline ml-1" />
     ) : (

@@ -9,8 +9,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { FormValidator, ValidationError } from "@/lib/formValidator";
+import { useCheckEmail } from "@/hooks/use-check-email";
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -35,6 +36,14 @@ export function CreateUserModal({
   });
 
   const [errors, setErrors] = useState<ValidationError[]>([]);
+  
+  // Check for duplicate email in real-time
+  const { data: emailCheckResult, isLoading: isCheckingEmail } = useCheckEmail(
+    formData.email,
+    isOpen && !!formData.email
+  );
+
+  const isDuplicateEmail = emailCheckResult?.exists ?? false;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -48,6 +57,12 @@ export function CreateUserModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check for duplicate email
+    if (isDuplicateEmail) {
+      setErrors([{ field: "email", message: "This email is already registered" }]);
+      return;
+    }
 
     // Validate form
     const validation = FormValidator.validateCreateUser(formData);
@@ -137,19 +152,50 @@ export function CreateUserModal({
             <Label htmlFor="email">
               Email <span className="text-destructive">*</span>
             </Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="user@example.com"
-              value={formData.email}
-              onChange={handleChange}
-              className={getFieldError("email") ? "border-destructive" : ""}
-            />
-            {getFieldError("email") && (
+            <div className="relative">
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="user@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                className={
+                  isDuplicateEmail
+                    ? "border-destructive pr-10"
+                    : formData.email && !isDuplicateEmail && !isCheckingEmail
+                    ? "border-green-600 pr-10"
+                    : getFieldError("email")
+                    ? "border-destructive pr-10"
+                    : "pr-10"
+                }
+              />
+              {isCheckingEmail && formData.email && (
+                <Loader2 className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+              {!isCheckingEmail && isDuplicateEmail && (
+                <AlertCircle className="absolute right-3 top-2.5 h-4 w-4 text-destructive" />
+              )}
+              {!isCheckingEmail && formData.email && !isDuplicateEmail && !getFieldError("email") && (
+                <CheckCircle2 className="absolute right-3 top-2.5 h-4 w-4 text-green-600" />
+              )}
+            </div>
+            {isDuplicateEmail && (
+              <div className="flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="h-3 w-3" />
+                This email is already registered
+              </div>
+            )}
+            {getFieldError("email") && !isDuplicateEmail && (
               <div className="flex items-center gap-1 text-xs text-destructive">
                 <AlertCircle className="h-3 w-3" />
                 {getFieldError("email")}
+              </div>
+            )}
+            {!isCheckingEmail && formData.email && !isDuplicateEmail && !getFieldError("email") && (
+              <div className="flex items-center gap-1 text-xs text-green-600">
+                <CheckCircle2 className="h-3 w-3" />
+                Email is available
               </div>
             )}
           </div>
@@ -220,7 +266,10 @@ export function CreateUserModal({
             <Button variant="outline" onClick={onClose} disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              disabled={isLoading || isDuplicateEmail || isCheckingEmail}
+            >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create User
             </Button>

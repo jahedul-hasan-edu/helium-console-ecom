@@ -11,6 +11,7 @@ export interface IStorageUser {
   getUsers(options?: GetUsersOptions): Promise<GetUsersResponse>;
   getUser(id: string): Promise<UserResponseDTO | undefined>;
   getUserByUsername(username: string): Promise<UserResponseDTO | undefined>;
+  getUserByEmail(email: string): Promise<UserResponseDTO | undefined>;
   createUser(user: CreateUserDTO & { tenantId: string; password: string; userIp: string }): Promise<UserResponseDTO>;
   updateUser(id: string, updates: UpdateUserDTO & { tenantId: string; userIp: string }): Promise<UserResponseDTO>;
   deleteUser(id: string): Promise<void>;
@@ -59,6 +60,11 @@ export class StorageUser implements IStorageUser {
 
   async getUserByUsername(username: string): Promise<UserResponseDTO | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, username));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<UserResponseDTO | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
 

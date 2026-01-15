@@ -48,6 +48,13 @@ export class UserService {
   }
 
   /**
+   * Check if an email already exists
+   */
+  async checkEmailExists(email: string): Promise<UserResponseDTO | undefined> {
+    return await storageUser.getUserByEmail(email);
+  }
+
+  /**
    * Create a new user
    */
   async createUser(req: Request): Promise<UserResponseDTO> {
@@ -82,6 +89,7 @@ export class UserService {
 
     return await storageUser.updateUser(id, {
       ...updates,
+      tenantId: DEFAULT_TENANT_ID,
       userIp,
     });
   }

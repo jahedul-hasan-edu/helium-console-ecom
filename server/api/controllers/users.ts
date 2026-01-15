@@ -23,6 +23,26 @@ export async function registerUserRoutes(app: Express): Promise<void> {
     })
   );
 
+  app.get(
+    "/api/admin/users/check-email",
+    asyncHandler(async (req, res) => {
+      const email = req.query.email as string;
+      
+      if (!email) {
+        return ResponseHandler.error(res, "Email is required", HTTP_STATUS.BAD_REQUEST);
+      }
+
+      const existingUser = await userService.checkEmailExists(email);
+      
+      ResponseHandler.success(
+        res,
+        "Email check completed",
+        { exists: !!existingUser, user: existingUser || null },
+        HTTP_STATUS.OK
+      );
+    })
+  );
+
   app.post(
     api.users.create.path,
     asyncHandler(async (req, res) => {

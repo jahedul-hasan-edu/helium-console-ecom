@@ -1,33 +1,23 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Search, 
-  Plus,
-  Edit,
-  Trash2,
-} from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
 import { useUpdateUser, useUsers, useCreateUser, useDeleteUser, useGetUser } from "@/hooks/use-User";
 import { CreateUserModal } from "@/pages/user/CreateUserModal";
 import { EditUserModal } from "@/pages/user/EditUserModal";
 import { DeleteUserModal } from "@/pages/user/DeleteUserModal";
-import { DataTable, Column } from "@/components/DataTable";
-import { PaginationControls } from "@/components/PaginationControls";
+import { PaginatedDataTable } from "@/components/PaginatedDataTable";
+import { ActionButtons } from "@/components/ActionButtons";
+import { COLUMNS, USERS_PAGE, BUTTON_LABELS, ERROR_MESSAGES, ACTION_BUTTONS, SORTABLE_FIELDS, SORT_CONFIG, type SortField, type SortOrder, TOTAL_PAGES } from "@/pages/user";
 import type { User } from "@/models/User";
 
 export default function Users() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [sortBy, setSortBy] = useState<"firstName" | "lastName" | "email" | "createdOn">("createdOn");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [currentPage, setCurrentPage] = useState(USERS_PAGE.CURRENT_PAGE);
+  const [pageSize, setPageSize] = useState(USERS_PAGE.PAGE_SIZE_LENGTH);
+  const [sortBy, setSortBy] = useState<SortField | undefined>(undefined);
+  const [sortOrder, setSortOrder] = useState<SortOrder | undefined>(undefined);
   
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -39,8 +29,8 @@ export default function Users() {
     page: currentPage,
     pageSize,
     search: searchTerm,
-    sortBy,
-    sortOrder,
+    sortBy: sortBy,
+    sortOrder: sortOrder,
   });
 
   const { data: selectedUser } = useGetUser(selectedUserId);
@@ -70,7 +60,7 @@ export default function Users() {
       setShowCreateModal(false);
       refetch();
     } catch (error) {
-      console.error("Failed to create user:", error);
+      console.error(ERROR_MESSAGES.CREATE_USER_FAILED, error);
     }
   };
 
@@ -82,7 +72,7 @@ export default function Users() {
       setSelectedUserId(null);
       refetch();
     } catch (error) {
-      console.error("Failed to update user:", error);
+      console.error(ERROR_MESSAGES.UPDATE_USER_FAILED, error);
     }
   };
 
@@ -94,88 +84,52 @@ export default function Users() {
       setSelectedUserId(null);
       refetch();
     } catch (error) {
-      console.error("Failed to delete user:", error);
+      console.error(ERROR_MESSAGES.DELETE_USER_FAILED, error);
     }
   };
 
   const handleSort = (field: keyof User) => {
-    const sortableField = field as "firstName" | "lastName" | "email" | "createdOn";
+    const sortableField = field as SortField;
+    
     if (sortBy === sortableField) {
-      // Toggle sort order if same field
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      // If clicking the same field, cycle through: asc -> desc -> clear
+      if (sortOrder === SORT_CONFIG.ORDERS.ASC) {
+        setSortOrder(SORT_CONFIG.ORDERS.DESC);
+      } else if (sortOrder === SORT_CONFIG.ORDERS.DESC) {
+        // Clear the sort
+        setSortBy(undefined);
+        setSortOrder(undefined);
+      }
     } else {
-      // Change field and default to desc
+      // If clicking a different field, start with ascending
       setSortBy(sortableField);
-      setSortOrder("desc");
+      setSortOrder(SORT_CONFIG.ORDERS.ASC);
     }
     setCurrentPage(1);
   };
 
-  const columns: Column<User>[] = [
-    {
-      key: "firstName",
-      label: "First Name",
-      sortable: true,
-    },
-    {
-      key: "lastName",
-      label: "Last Name",
-      sortable: true,
-    },
-    {
-      key: "email",
-      label: "Email",
-      sortable: true,
-    },
-    {
-      key: "mobile",
-      label: "Mobile",
-    },
-    {
-      key: "createdOn",
-      label: "Created On",
-      sortable: true,
-      render: (value) => value ? new Date(value).toLocaleDateString() : "N/A",
-    },
-  ];
-
   const renderActions = (user: User) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm">
-          ⋯
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => handleEdit(user.id)} className="gap-2">
-          <Edit className="h-4 w-4" />
-          Edit
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={() => handleDelete(user.id)}
-          className="gap-2 text-destructive"
-        >
-          <Trash2 className="h-4 w-4" />
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <ActionButtons
+      onEdit={() => handleEdit(user.id)}
+      onDelete={() => handleDelete(user.id)}
+      showLabel={ACTION_BUTTONS.SHOW_LABEL}
+      size={ACTION_BUTTONS.SIZE}
+      variant={ACTION_BUTTONS.VARIANT}
+    />
   );
 
-  const totalPages = usersData ? Math.ceil(usersData.total / usersData.pageSize) : 0;
-  const startRow = usersData ? (currentPage - 1) * pageSize + 1 : 0;
-  const endRow = usersData ? Math.min(currentPage * pageSize, usersData.total) : 0;
+  const totalPages = TOTAL_PAGES(usersData!);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-          <p className="text-muted-foreground mt-1">Manage system users and permissions.</p>
+          <h1 className="text-3xl font-bold tracking-tight">{USERS_PAGE.TITLE}</h1>
+          <p className="text-muted-foreground mt-1">{USERS_PAGE.SUBTITLE}</p>
         </div>
         <Button onClick={() => setShowCreateModal(true)} className="gap-2">
           <Plus className="h-4 w-4" />
-          Add User
+          {BUTTON_LABELS.ADD_USER}
         </Button>
       </div>
 
@@ -184,7 +138,7 @@ export default function Users() {
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search users..."
+            placeholder={USERS_PAGE.SEARCH_PLACEHOLDER}
             className="pl-9"
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
@@ -192,20 +146,16 @@ export default function Users() {
         </div>
       </div>
 
-      {/* Table */}
-      <DataTable
-        columns={columns}
+      {/* Table with Pagination */}
+      <PaginatedDataTable
+        columns={COLUMNS}
         data={usersData?.items}
         isLoading={isLoading}
         sortBy={sortBy}
         sortOrder={sortOrder}
         onSort={handleSort}
-        emptyMessage="No users found."
+        emptyMessage={USERS_PAGE.NO_USERS_MESSAGE}
         renderActions={renderActions}
-      />
-
-      {/* Pagination */}
-      <PaginationControls
         currentPage={currentPage}
         totalPages={totalPages}
         pageSize={pageSize}
@@ -215,7 +165,6 @@ export default function Users() {
           setPageSize(size);
           setCurrentPage(1);
         }}
-        isLoading={isLoading}
       />
 
       {/* Modals */}
