@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { FormValidator, ValidationError } from "@/lib/formValidator";
-import { useCheckEmail } from "@/hooks/use-check-email";
+import { useCheckEmail } from "@/hooks/use-User";
 
 interface CreateUserModalProps {
   isOpen: boolean;

@@ -3,24 +3,11 @@ import { apiService } from "@/lib/apiService";
 import { CreateUserRequest, UpdateUserRequest, User } from "@/models/User";
 import { buildUrl } from "@/lib/buildUrl";
 import { api } from "@/routes/userRoute";
-
-export interface UsersQueryParams {
-  page?: number;
-  pageSize?: number;
-  search?: string;
-  sortBy?: string;
-  sortOrder?: "asc" | "desc";
-}
-
-export interface UsersListResponse {
-  items: User[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
+import { SORT_ORDERS } from "@/lib/constants";
+import { ListResponse, QueryParams } from "@/lib/interface";
 
 // USERS
-export function useUsers(params?: UsersQueryParams) {
+export function useUsers(params?: QueryParams) {
   const queryParams = new URLSearchParams();
   if (params?.page) queryParams.append("page", params.page.toString());
   if (params?.pageSize) queryParams.append("pageSize", params.pageSize.toString());
@@ -34,7 +21,7 @@ export function useUsers(params?: UsersQueryParams) {
   return useQuery({
     queryKey: [api.users.list.path, params],
     queryFn: () =>
-      apiService.get<UsersListResponse>(url, {
+      apiService.get<ListResponse<User>>(url, {
         showSuccessToast: false,
       }),
   });
@@ -90,4 +77,24 @@ export function useDeleteUser() {
   });
 }
 
-
+export function useCheckEmail(email: string, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ["checkEmail", email],
+    queryFn: async () => {
+      if (!email) return null;
+      try {
+        const result = await apiService.get<{ exists: boolean; user?: any }>(
+          api.users.checkEmail.path(email),
+          {
+            showSuccessToast: false,
+            showErrorToast: false,
+          }
+        );
+        return result.exists ? result : null;
+      } catch (error) {
+        return null;
+      }
+    },
+    enabled: enabled && !!email && email.includes("@"),
+  });
+}

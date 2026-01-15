@@ -21,5 +21,9 @@ export const api = {
       method: 'DELETE' as const,
       path: (id:string)=> `/api/admin/users/${id}`,
     },
+    checkEmail: {
+      method: 'GET' as const,
+      path: (email: string) => `/api/admin/users/check-email?email=${encodeURIComponent(email)}`,
+    },
   },
 };

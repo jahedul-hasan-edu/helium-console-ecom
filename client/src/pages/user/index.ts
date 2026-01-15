@@ -1,10 +1,11 @@
 import { Column } from "@/components/PaginatedDataTable";
-import { UsersListResponse } from "@/hooks/use-User";
+import { SORT_ORDERS } from "@/lib/constants";
+import { ListResponse } from "@/lib/interface";
 import { User } from "@/models/User";
 
 // Sort types
 export type SortField = "firstName" | "lastName" | "email" | "createdOn";
-export type SortOrder = "asc" | "desc";
+export type SortOrder = typeof SORT_ORDERS[keyof typeof SORT_ORDERS];
 
 // Page constants
 export const USERS_PAGE = {
@@ -50,8 +51,8 @@ export const SORTABLE_FIELDS = {
 // Sort configuration
 export const SORT_CONFIG = {
   ORDERS: {
-    ASC: "asc" as SortOrder,
-    DESC: "desc" as SortOrder,
+    ASC: SORT_ORDERS.ASC as SortOrder,
+    DESC: SORT_ORDERS.DESC as SortOrder,
   },
 } as const;
 
@@ -84,4 +85,4 @@ export const COLUMNS: Column<User>[] = [
     },
   ];
 
-export const TOTAL_PAGES = (usersData:UsersListResponse)=> usersData ? Math.ceil(usersData.total / usersData.pageSize) : 0;
+export const TOTAL_PAGES = (usersData: ListResponse<User>) => usersData ? Math.ceil(usersData.total / usersData.pageSize) : 0;
