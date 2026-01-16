@@ -11,6 +11,7 @@ import Tenants from "./pages/tenant/Tenants";
 import MainCategories from "./pages/mainCategory/MainCategories";
 import Categories from "./pages/category/Categories";
 import SubCategories from "./pages/subCategory/SubCategories";
+import SubSubCategories from "./pages/subSubCategory/SubSubCategories";
 
 function Router() {
   return (
@@ -36,6 +37,9 @@ function Router() {
       </Route>
       <Route path="/admin/sub-categories">
         <Layout><SubCategories /></Layout>
+      </Route>
+      <Route path="/admin/sub-sub-categories">
+        <Layout><SubSubCategories /></Layout>
       </Route>
 
       <Route component={NotFound} />
