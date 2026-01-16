@@ -9,7 +9,8 @@ import {
   Menu,
   Bell,
   Search,
-  LogOut
+  LogOut,
+  Tags
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ const navigation = [
   { name: 'Tenants', href: '/admin/tenants', icon: Calendar },
   { name: 'Main Categories', href: '/admin/main-categories', icon: ShoppingBag },
   { name: 'Categories', href: '/admin/categories', icon: Tag },
+  { name: 'Sub Categories', href: '/admin/sub-categories', icon: Tags },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

@@ -184,6 +184,40 @@ class ApiService {
   async checkCategorySlug(slug: string): Promise<any> {
     return this.get(`/api/admin/categories/check-slug?slug=${encodeURIComponent(slug)}`, { showSuccessToast: false, showErrorToast: false });
   }
+
+  // SubCategory API methods
+  async getSubCategories(params?: any): Promise<any> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    const url = `/api/admin/sub-categories${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return this.get(url, { showSuccessToast: false, showErrorToast: true });
+  }
+
+  async getSubCategory(id: string): Promise<any> {
+    return this.get(`/api/admin/sub-categories/${id}`, { showSuccessToast: false, showErrorToast: true });
+  }
+
+  async createSubCategory(data: any): Promise<any> {
+    return this.post(`/api/admin/sub-categories`, data, { showSuccessToast: false, showErrorToast: true });
+  }
+
+  async updateSubCategory(id: string, data: any): Promise<any> {
+    return this.patch(`/api/admin/sub-categories/${id}`, data, { showSuccessToast: false, showErrorToast: true });
+  }
+
+  async deleteSubCategory(id: string): Promise<any> {
+    return this.delete(`/api/admin/sub-categories/${id}`, { showSuccessToast: false, showErrorToast: true });
+  }
+
+  async checkSubCategorySlug(slug: string): Promise<any> {
+    return this.get(`/api/admin/sub-categories/check-slug?slug=${encodeURIComponent(slug)}`, { showSuccessToast: false, showErrorToast: false });
+  }
 }
 
 export const apiService = new ApiService();
