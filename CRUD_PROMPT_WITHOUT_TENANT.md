@@ -4,10 +4,22 @@
 You are creating a new CRUD feature following the established pattern from the User feature. This prompt is for features that do NOT store tenant_id in the entity.
 
 ## Feature Details
-**Feature Name**: [REPLACE_WITH_FEATURE_NAME]
+**Feature Name**: [Tenant]
 **SQL Schema**:
 ```sql
-[REPLACE_WITH_YOUR_SQL_CREATE_TABLE_STATEMENT]
+create table tenants (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  domain text unique,
+  is_active boolean default true,
+
+  created_by uuid null,
+  updated_by uuid null,
+  created_on timestamptz null,
+  updated_on timestamptz null,
+  user_ip inet null
+);
+
 ```
 
 ## Database Schema Analysis
@@ -249,3 +261,4 @@ Frontend:
 - [ ] PaginatedDataTable used
 - [ ] Sorting 3-click cycle implemented
 - [ ] No magic strings in components
+- [ ] Each feature has separate form validator

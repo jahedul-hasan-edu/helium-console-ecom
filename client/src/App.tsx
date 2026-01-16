@@ -7,6 +7,9 @@ import { Layout } from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
 import Users from "@/pages/user/Users";
 import NotFound from "./pages/not-found";
+import Tenants from "./pages/tenant/Tenants";
+import MainCategories from "./pages/mainCategory/MainCategories";
+import Categories from "./pages/category/Categories";
 
 function Router() {
   return (
@@ -20,6 +23,15 @@ function Router() {
       </Route>
       <Route path="/admin/users">
         <Layout><Users /></Layout>
+      </Route>
+      <Route path="/admin/tenants">
+        <Layout><Tenants /></Layout>
+      </Route>
+      <Route path="/admin/main-categories">
+        <Layout><MainCategories /></Layout>
+      </Route>
+      <Route path="/admin/categories">
+        <Layout><Categories /></Layout>
       </Route>
 
       <Route component={NotFound} />

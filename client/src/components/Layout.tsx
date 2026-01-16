@@ -28,6 +28,9 @@ import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: 'Users', href: '/admin/users', icon: Users },
+  { name: 'Tenants', href: '/admin/tenants', icon: Calendar },
+  { name: 'Main Categories', href: '/admin/main-categories', icon: ShoppingBag },
+  { name: 'Categories', href: '/admin/categories', icon: Tag },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -40,7 +43,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
           <Briefcase className="w-5 h-5 text-primary-foreground" />
         </div>
-        <span className="text-xl font-bold font-display tracking-tight">AdminPanel</span>
+        <span className="text-xl font-bold font-display tracking-tight">Helium Console</span>
       </div>
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
         {navigation.map((item) => {
@@ -63,13 +66,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
           );
         })}
       </nav>
-      <div className="p-4 border-t border-border/50">
-        <div className="bg-muted/50 rounded-xl p-4">
-          <h4 className="text-sm font-semibold mb-1">Need help?</h4>
-          <p className="text-xs text-muted-foreground mb-3">Check our documentation for guide.</p>
-          <Button variant="outline" size="sm" className="w-full text-xs">Documentation</Button>
-        </div>
-      </div>
     </>
   );
 

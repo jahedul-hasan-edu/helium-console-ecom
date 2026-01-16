@@ -4,10 +4,24 @@
 You are creating a new CRUD feature following the established pattern from the User feature. This prompt is for features that store tenant_id in the entity (multi-tenant support).
 
 ## Feature Details
-**Feature Name**: [REPLACE_WITH_FEATURE_NAME]
+**Feature Name**: [Category]
 **SQL Schema**:
 ```sql
-[REPLACE_WITH_YOUR_SQL_CREATE_TABLE_STATEMENT]
+create table categories (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid references tenants(id),
+  main_category_id uuid references main_categories(id), //required
+  name text, //required 
+  slug text, //required
+
+  created_by uuid null,
+  updated_by uuid null,
+  created_on timestamptz null,
+  updated_on timestamptz null,
+  user_ip inet null
+);
+
+
 ```
 
 ## Database Schema Analysis
@@ -310,6 +324,7 @@ Frontend:
 - [ ] No magic strings in components
 - [ ] tenant_id NOT exposed in UI
 - [ ] tenant_id NOT in forms
+- [ ] Each feature has separate form validator
 
 ## Important: Tenant Data Isolation
 
@@ -324,3 +339,9 @@ The frontend:
 - Should trust server-side tenant filtering
 - Should not expose tenant_id in UI
 - Should assume all data returned is from current tenant
+
+
+///Special Changes for category feature
+for main_category_id field
+you have to populate a dropdown where you have to load list of main cateogory these dropdown can serverside user can search/select main category from the dropdown because my main category get api has pagination.
+user can stored/update main_category_id

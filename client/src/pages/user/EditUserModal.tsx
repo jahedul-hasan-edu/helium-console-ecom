@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, AlertCircle } from "lucide-react";
 import { User } from "@/models/User";
-import { FormValidator, ValidationError } from "@/lib/formValidator";
+import { getFieldError, ValidationError } from "@/lib/formValidator";
+import { FormValidator } from "./formValidator";
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -74,10 +75,6 @@ export function EditUserModal({
     }
   };
 
-  const getFieldError = (field: string) => {
-    return errors.find((e) => e.field === field)?.message;
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -100,12 +97,12 @@ export function EditUserModal({
                 placeholder="First name"
                 value={formData.firstName}
                 onChange={handleChange}
-                className={getFieldError("firstName") ? "border-destructive" : ""}
+                className={getFieldError("firstName", errors) ? "border-destructive" : ""}
               />
-              {getFieldError("firstName") && (
+              {getFieldError("firstName", errors) && (
                 <div className="flex items-center gap-1 text-xs text-destructive">
                   <AlertCircle className="h-3 w-3" />
-                  {getFieldError("firstName")}
+                  {getFieldError("firstName", errors)}
                 </div>
               )}
             </div>
@@ -120,12 +117,12 @@ export function EditUserModal({
                 placeholder="Last name"
                 value={formData.lastName}
                 onChange={handleChange}
-                className={getFieldError("lastName") ? "border-destructive" : ""}
+                className={getFieldError("lastName", errors) ? "border-destructive" : ""}
               />
-              {getFieldError("lastName") && (
+              {getFieldError("lastName", errors) && (
                 <div className="flex items-center gap-1 text-xs text-destructive">
                   <AlertCircle className="h-3 w-3" />
-                  {getFieldError("lastName")}
+                  {getFieldError("lastName", errors)}
                 </div>
               )}
             </div>
@@ -155,12 +152,12 @@ export function EditUserModal({
               placeholder="+1 (555) 123-4567"
               value={formData.mobile}
               onChange={handleChange}
-              className={getFieldError("mobile") ? "border-destructive" : ""}
+              className={getFieldError("mobile", errors) ? "border-destructive" : ""}
             />
-            {getFieldError("mobile") && (
+            {getFieldError("mobile", errors) && (
               <div className="flex items-center gap-1 text-xs text-destructive">
                 <AlertCircle className="h-3 w-3" />
-                {getFieldError("mobile")}
+                {getFieldError("mobile", errors)}
               </div>
             )}
           </div>

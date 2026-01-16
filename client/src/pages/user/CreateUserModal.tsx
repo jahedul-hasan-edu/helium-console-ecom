@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
-import { FormValidator, ValidationError } from "@/lib/formValidator";
+import { getFieldError, ValidationError } from "@/lib/formValidator";
 import { useCheckEmail } from "@/hooks/use-User";
+import { FormValidator } from "./formValidator";
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -91,10 +92,6 @@ export function CreateUserModal({
     }
   };
 
-  const getFieldError = (field: string) => {
-    return errors.find((e) => e.field === field)?.message;
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
@@ -117,12 +114,12 @@ export function CreateUserModal({
                 placeholder="First name"
                 value={formData.firstName}
                 onChange={handleChange}
-                className={getFieldError("firstName") ? "border-destructive" : ""}
+                className={getFieldError("firstName", errors) ? "border-destructive" : ""}
               />
-              {getFieldError("firstName") && (
+              {getFieldError("firstName", errors) && (
                 <div className="flex items-center gap-1 text-xs text-destructive">
                   <AlertCircle className="h-3 w-3" />
-                  {getFieldError("firstName")}
+                  {getFieldError("firstName", errors)}
                 </div>
               )}
             </div>
@@ -137,12 +134,12 @@ export function CreateUserModal({
                 placeholder="Last name"
                 value={formData.lastName}
                 onChange={handleChange}
-                className={getFieldError("lastName") ? "border-destructive" : ""}
+                className={getFieldError("lastName", errors) ? "border-destructive" : ""}
               />
-              {getFieldError("lastName") && (
+              {getFieldError("lastName", errors) && (
                 <div className="flex items-center gap-1 text-xs text-destructive">
                   <AlertCircle className="h-3 w-3" />
-                  {getFieldError("lastName")}
+                  {getFieldError("lastName", errors)}
                 </div>
               )}
             </div>
@@ -165,7 +162,7 @@ export function CreateUserModal({
                     ? "border-destructive pr-10"
                     : formData.email && !isDuplicateEmail && !isCheckingEmail
                     ? "border-green-600 pr-10"
-                    : getFieldError("email")
+                    : getFieldError("email", errors)
                     ? "border-destructive pr-10"
                     : "pr-10"
                 }
@@ -176,7 +173,7 @@ export function CreateUserModal({
               {!isCheckingEmail && isDuplicateEmail && (
                 <AlertCircle className="absolute right-3 top-2.5 h-4 w-4 text-destructive" />
               )}
-              {!isCheckingEmail && formData.email && !isDuplicateEmail && !getFieldError("email") && (
+              {!isCheckingEmail && formData.email && !isDuplicateEmail && !getFieldError("email", errors) && (
                 <CheckCircle2 className="absolute right-3 top-2.5 h-4 w-4 text-green-600" />
               )}
             </div>
@@ -186,13 +183,13 @@ export function CreateUserModal({
                 This email is already registered
               </div>
             )}
-            {getFieldError("email") && !isDuplicateEmail && (
+            {getFieldError("email", errors) && !isDuplicateEmail && (
               <div className="flex items-center gap-1 text-xs text-destructive">
                 <AlertCircle className="h-3 w-3" />
-                {getFieldError("email")}
+                {getFieldError("email", errors)}
               </div>
             )}
-            {!isCheckingEmail && formData.email && !isDuplicateEmail && !getFieldError("email") && (
+            {!isCheckingEmail && formData.email && !isDuplicateEmail && !getFieldError("email", errors) && (
               <div className="flex items-center gap-1 text-xs text-green-600">
                 <CheckCircle2 className="h-3 w-3" />
                 Email is available
@@ -210,12 +207,12 @@ export function CreateUserModal({
               placeholder="+1 (555) 123-4567"
               value={formData.mobile}
               onChange={handleChange}
-              className={getFieldError("mobile") ? "border-destructive" : ""}
+              className={getFieldError("mobile", errors) ? "border-destructive" : ""}
             />
-            {getFieldError("mobile") && (
+            {getFieldError("mobile", errors) && (
               <div className="flex items-center gap-1 text-xs text-destructive">
                 <AlertCircle className="h-3 w-3" />
-                {getFieldError("mobile")}
+                {getFieldError("mobile", errors)}
               </div>
             )}
           </div>
@@ -231,12 +228,12 @@ export function CreateUserModal({
               placeholder="At least 6 characters"
               value={formData.password}
               onChange={handleChange}
-              className={getFieldError("password") ? "border-destructive" : ""}
+              className={getFieldError("password", errors) ? "border-destructive" : ""}
             />
-            {getFieldError("password") && (
+            {getFieldError("password", errors) && (
               <div className="flex items-center gap-1 text-xs text-destructive">
                 <AlertCircle className="h-3 w-3" />
-                {getFieldError("password")}
+                {getFieldError("password", errors)}
               </div>
             )}
           </div>
@@ -252,12 +249,12 @@ export function CreateUserModal({
               placeholder="Re-enter password"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className={getFieldError("confirmPassword") ? "border-destructive" : ""}
+              className={getFieldError("confirmPassword", errors) ? "border-destructive" : ""}
             />
-            {getFieldError("confirmPassword") && (
+            {getFieldError("confirmPassword", errors) && (
               <div className="flex items-center gap-1 text-xs text-destructive">
                 <AlertCircle className="h-3 w-3" />
-                {getFieldError("confirmPassword")}
+                {getFieldError("confirmPassword", errors)}
               </div>
             )}
           </div>
