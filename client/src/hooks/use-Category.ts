@@ -7,100 +7,106 @@ import type {
   GetCategoriesParams,
   GetCategoriesResponse,
 } from "../models/Category";
-import { useToast } from "./use-toast";
-
-const CATEGORIES_QUERY_KEY = "categories";
+import { api } from "../routes/categoryRoute";
+import { ListResponse } from "@/lib/interface";
 
 export function useCategories(params?: GetCategoriesParams) {
-  return useQuery<GetCategoriesResponse>({
-    queryKey: [CATEGORIES_QUERY_KEY, params],
-    queryFn: () => apiService.getCategories(params),
+  const queryParams = new URLSearchParams();
+  if (params?.page) queryParams.append("page", params.page.toString());
+  if (params?.pageSize) queryParams.append("pageSize", params.pageSize.toString());
+  if (params?.search) queryParams.append("search", params.search);
+  if (params?.sortBy) queryParams.append("sortBy", params.sortBy);
+  if (params?.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+
+  const queryString = queryParams.toString();
+  const url = queryString ? `${api.categories.list.path}?${queryString}` : api.categories.list.path;
+
+  return useQuery({
+    queryKey: [api.categories.list.path, params],
+    queryFn: () =>
+      apiService.get<ListResponse<Category>>(url, {
+        showSuccessToast: false,
+      }),
   });
 }
 
 export function useCategory(id: string) {
-  return useQuery<Category>({
-    queryKey: [CATEGORIES_QUERY_KEY, id],
-    queryFn: () => apiService.getCategory(id),
+  return useQuery({
+    queryKey: [api.categories.get.path(id || "")],
+    queryFn: () =>
+      apiService.get<Category>(api.categories.get.path(id!), {
+        showSuccessToast: false,
+      }),
     enabled: !!id,
   });
 }
 
 export function useCheckCategorySlug() {
+  return useQuery({
+    queryKey: ["checkCategorySlug"],
+    queryFn: async () => null,
+    enabled: false,
+  });
+}
+
+export function useCheckCategorySlugMutation() {
   return useMutation<{ exists: boolean; category: Category | null }, Error, string>({
-    mutationFn: (slug: string) => apiService.checkCategorySlug(slug),
+    mutationFn: (slug: string) =>
+      apiService.get<{ exists: boolean; category: Category | null }>(
+        api.categories.checkSlug.path(slug),
+        {
+          showSuccessToast: false,
+          showErrorToast: false,
+        }
+      ),
   });
 }
 
 export function useCreateCategory() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation<Category, Error, CreateCategoryRequest>({
-    mutationFn: (data: CreateCategoryRequest) => apiService.createCategory(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [CATEGORIES_QUERY_KEY] });
-      toast({
-        title: "Success",
-        description: "Category created successfully",
+    mutationFn: async (data: CreateCategoryRequest) => {
+      return apiService.post<Category>(api.categories.create.path, data, {
+        successMessage: "Category created successfully",
       });
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create category",
-        variant: "destructive",
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.categories.list.path] });
     },
   });
 }
 
 export function useUpdateCategory() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation<
     Category,
     Error,
     { id: string; data: UpdateCategoryRequest }
   >({
-    mutationFn: ({ id, data }) => apiService.updateCategory(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [CATEGORIES_QUERY_KEY] });
-      toast({
-        title: "Success",
-        description: "Category updated successfully",
+    mutationFn: async ({ id, data }) => {
+      return apiService.patch<Category>(api.categories.update.path(id), data, {
+        successMessage: "Category updated successfully",
       });
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update category",
-        variant: "destructive",
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.categories.list.path] });
     },
   });
 }
 
 export function useDeleteCategory() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation<void, Error, string>({
-    mutationFn: (id: string) => apiService.deleteCategory(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [CATEGORIES_QUERY_KEY] });
-      toast({
-        title: "Success",
-        description: "Category deleted successfully",
+    mutationFn: async (id: string) => {
+      return apiService.delete<void>(api.categories.delete.path(id), {
+        successMessage: "Category deleted successfully",
       });
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete category",
-        variant: "destructive",
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.categories.list.path] });
     },
   });
 }

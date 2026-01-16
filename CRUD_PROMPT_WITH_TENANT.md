@@ -4,15 +4,21 @@
 You are creating a new CRUD feature following the established pattern from the User feature. This prompt is for features that store tenant_id in the entity (multi-tenant support).
 
 ## Feature Details
-**Feature Name**: [Sub Sub Category]
+**Feature Name**: [Product]
 **SQL Schema**:
 ```sql
-create table sub_sub_categories (
+create table products (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid references tenants(id),
+
   sub_category_id uuid references sub_categories(id), /required
+  sub_sub_category_id uuid references sub_sub_categories(id), /required
+
   name text, /required
-  slug text, /required
+  description text, /required
+  price numeric(10,2), /required
+  stock int, /required
+  is_active boolean default true, /required
 
   created_by uuid null,
   updated_by uuid null,
@@ -20,6 +26,7 @@ create table sub_sub_categories (
   updated_on timestamptz null,
   user_ip inet null
 );
+
 
 
 
@@ -343,7 +350,7 @@ The frontend:
 - Should assume all data returned is from current tenant
 
 
-///Special Changes for Sub Sub category feature
-for sub_category_id field
-you have to populate a dropdown where you have to load list of sub cateogory these dropdown can serverside user can search/select category from the dropdown because my  sub category get api has pagination.
-user can stored/update sub_category_id
+///Special Changes for Product feature
+for sub_category_id and sub sub category id field
+you have to populate a dropdown where you have to load list of sub cateogory and sub sub category these dropdown can serverside user can search/select sub category and sub sub category from the dropdown because my  sub category and sub sub category get api has pagination.
+user can stored/update sub_category_id and sub sub category id

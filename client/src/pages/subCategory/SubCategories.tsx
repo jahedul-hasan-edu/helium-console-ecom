@@ -9,7 +9,7 @@ import { Plus, Search } from "lucide-react";
 import { CreateSubCategoryModal } from "./CreateSubCategoryModal";
 import { EditSubCategoryModal } from "./EditSubCategoryModal";
 import { DeleteSubCategoryModal } from "./DeleteSubCategoryModal";
-import { SUB_CATEGORY_PAGE_SIZE_OPTIONS, SUB_CATEGORY_SORT_FIELDS, SUB_CATEGORY_FEATURE_TITLE, SUB_CATEGORY_FEATURE_DESCRIPTION } from "./index";
+import { SUB_CATEGORY_SORT_FIELDS, SUB_CATEGORY_FEATURE_TITLE, SUB_CATEGORY_FEATURE_DESCRIPTION } from "./index";
 import type { SubCategory } from "@/models/SubCategory";
 
 export default function SubCategories() {

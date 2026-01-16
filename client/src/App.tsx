@@ -12,6 +12,7 @@ import MainCategories from "./pages/mainCategory/MainCategories";
 import Categories from "./pages/category/Categories";
 import SubCategories from "./pages/subCategory/SubCategories";
 import SubSubCategories from "./pages/subSubCategory/SubSubCategories";
+import Products from "./pages/product/Products";
 
 function Router() {
   return (
@@ -40,6 +41,9 @@ function Router() {
       </Route>
       <Route path="/admin/sub-sub-categories">
         <Layout><SubSubCategories /></Layout>
+      </Route>
+      <Route path="/admin/products">
+        <Layout><Products /></Layout>
       </Route>
 
       <Route component={NotFound} />

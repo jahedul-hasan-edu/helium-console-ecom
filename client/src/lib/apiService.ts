@@ -252,6 +252,29 @@ class ApiService {
   async checkSubSubCategorySlug(slug: string): Promise<any> {
     return this.get(`/api/admin/sub-sub-categories/check-slug?slug=${encodeURIComponent(slug)}`, { showSuccessToast: false, showErrorToast: false });
   }
+
 }
 
 export const apiService = new ApiService();
+
+// Named exports for convenient imports
+export const {
+  getCategories,
+  getCategory,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  checkCategorySlug,
+  getSubCategories,
+  getSubCategory,
+  createSubCategory,
+  updateSubCategory,
+  deleteSubCategory,
+  checkSubCategorySlug,
+  getSubSubCategories,
+  getSubSubCategory,
+  createSubSubCategory,
+  updateSubSubCategory,
+  deleteSubSubCategory,
+  checkSubSubCategorySlug,
+} = apiService;

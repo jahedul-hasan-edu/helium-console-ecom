@@ -7,100 +7,98 @@ import type {
   GetSubSubCategoriesParams,
   GetSubSubCategoriesResponse,
 } from "../models/SubSubCategory";
-import { useToast } from "./use-toast";
-
-const SUB_SUB_CATEGORIES_QUERY_KEY = "subSubCategories";
+import { api } from "../routes/subSubCategoryRoute";
+import { ListResponse } from "@/lib/interface";
 
 export function useSubSubCategories(params?: GetSubSubCategoriesParams) {
-  return useQuery<GetSubSubCategoriesResponse>({
-    queryKey: [SUB_SUB_CATEGORIES_QUERY_KEY, params],
-    queryFn: () => apiService.getSubSubCategories(params),
+  const queryParams = new URLSearchParams();
+  if (params?.page) queryParams.append("page", params.page.toString());
+  if (params?.pageSize) queryParams.append("pageSize", params.pageSize.toString());
+  if (params?.search) queryParams.append("search", params.search);
+  if (params?.sortBy) queryParams.append("sortBy", params.sortBy);
+  if (params?.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+
+  const queryString = queryParams.toString();
+  const url = queryString ? `${api.subSubCategories.list.path}?${queryString}` : api.subSubCategories.list.path;
+
+  return useQuery({
+    queryKey: [api.subSubCategories.list.path, params],
+    queryFn: () =>
+      apiService.get<ListResponse<SubSubCategory>>(url, {
+        showSuccessToast: false,
+      }),
   });
 }
 
 export function useSubSubCategory(id: string) {
-  return useQuery<SubSubCategory>({
-    queryKey: [SUB_SUB_CATEGORIES_QUERY_KEY, id],
-    queryFn: () => apiService.getSubSubCategory(id),
+  return useQuery({
+    queryKey: [api.subSubCategories.get.path(id || "")],
+    queryFn: () =>
+      apiService.get<SubSubCategory>(api.subSubCategories.get.path(id!), {
+        showSuccessToast: false,
+      }),
     enabled: !!id,
   });
 }
 
 export function useCheckSubSubCategorySlug() {
   return useMutation<{ exists: boolean; subSubCategory: SubSubCategory | null }, Error, string>({
-    mutationFn: (slug: string) => apiService.checkSubSubCategorySlug(slug),
+    mutationFn: (slug: string) =>
+      apiService.get<{ exists: boolean; subSubCategory: SubSubCategory | null }>(
+        api.subSubCategories.checkSlug.path(slug),
+        {
+          showSuccessToast: false,
+          showErrorToast: false,
+        }
+      ),
   });
 }
 
 export function useCreateSubSubCategory() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation<SubSubCategory, Error, CreateSubSubCategoryRequest>({
-    mutationFn: (data: CreateSubSubCategoryRequest) => apiService.createSubSubCategory(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [SUB_SUB_CATEGORIES_QUERY_KEY] });
-      toast({
-        title: "Success",
-        description: "Sub-sub-category created successfully",
+    mutationFn: async (data: CreateSubSubCategoryRequest) => {
+      return apiService.post<SubSubCategory>(api.subSubCategories.create.path, data, {
+        successMessage: "Sub-sub-category created successfully",
       });
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create sub-sub-category",
-        variant: "destructive",
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.subSubCategories.list.path] });
     },
   });
 }
 
 export function useUpdateSubSubCategory() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation<
     SubSubCategory,
     Error,
     { id: string; data: UpdateSubSubCategoryRequest }
   >({
-    mutationFn: ({ id, data }) => apiService.updateSubSubCategory(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [SUB_SUB_CATEGORIES_QUERY_KEY] });
-      toast({
-        title: "Success",
-        description: "Sub-sub-category updated successfully",
+    mutationFn: async ({ id, data }) => {
+      return apiService.patch<SubSubCategory>(api.subSubCategories.update.path(id), data, {
+        successMessage: "Sub-sub-category updated successfully",
       });
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update sub-sub-category",
-        variant: "destructive",
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.subSubCategories.list.path] });
     },
   });
 }
 
 export function useDeleteSubSubCategory() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation<void, Error, string>({
-    mutationFn: (id: string) => apiService.deleteSubSubCategory(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [SUB_SUB_CATEGORIES_QUERY_KEY] });
-      toast({
-        title: "Success",
-        description: "Sub-sub-category deleted successfully",
+    mutationFn: async (id: string) => {
+      return apiService.delete<void>(api.subSubCategories.delete.path(id), {
+        successMessage: "Sub-sub-category deleted successfully",
       });
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete sub-sub-category",
-        variant: "destructive",
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.subSubCategories.list.path] });
     },
   });
 }

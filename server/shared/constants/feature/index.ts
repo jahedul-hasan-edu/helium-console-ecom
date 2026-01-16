@@ -7,3 +7,4 @@ export * from "./mainCategoryMessages";
 export * from "./categoryMessages";
 export * from "./subCategoryMessages";
 export * from "./subSubCategoryMessages";
+export * from "./productMessages";
