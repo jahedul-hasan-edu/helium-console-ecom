@@ -2,6 +2,17 @@
  * Product model interfaces
  */
 
+export interface ProductImage {
+  id: string;
+  productId: string | null;
+  imageUrl: string | null;
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdOn: string | null;
+  updatedOn: string | null;
+  userIp: string | null;
+}
+
 export interface Product {
   id: string;
   tenantId: string | null;
@@ -19,6 +30,7 @@ export interface Product {
   createdOn: string | null;
   updatedOn: string | null;
   userIp: string | null;
+  images?: ProductImage[];
 }
 
 export interface CreateProductRequest {
@@ -29,6 +41,7 @@ export interface CreateProductRequest {
   price: string;
   stock: number;
   isActive: boolean;
+  images?: File[];
 }
 
 export interface UpdateProductRequest {
@@ -39,6 +52,8 @@ export interface UpdateProductRequest {
   price?: string;
   stock?: number;
   isActive?: boolean;
+  images?: File[];
+  imagesToDelete?: string[];
 }
 
 export interface GetProductsParams {

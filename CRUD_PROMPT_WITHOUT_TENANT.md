@@ -262,3 +262,9 @@ Frontend:
 - [ ] Sorting 3-click cycle implemented
 - [ ] No magic strings in components
 - [ ] Each feature has separate form validator
+
+
+CAUTION: 
+Don't modify components, lib folders in the client
+Don't modify shared>utils in the server
+Don't modify db.ts in the server

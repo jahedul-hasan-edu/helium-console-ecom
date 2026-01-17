@@ -14,6 +14,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { validateUpdateProduct } from "./formValidator";
+import { ExistingImage, FileUpload } from "@/components/FileUpload";
 
 interface EditProductModalProps {
   isOpen: boolean;
@@ -31,6 +32,8 @@ export function EditProductModal({ isOpen, onClose, productId }: EditProductModa
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState(0);
   const [isActive, setIsActive] = useState(true);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [subCategorySearch, setSubCategorySearch] = useState("");
   const [subSubCategorySearch, setSubSubCategorySearch] = useState("");
@@ -68,6 +71,8 @@ export function EditProductModal({ isOpen, onClose, productId }: EditProductModa
       setPrice(product.price || "");
       setStock(product.stock || 0);
       setIsActive(product.isActive ?? true);
+      setSelectedImages([]);
+      setImagesToDelete([]);
 
       // Find and set the sub category name
       const subCategory = allSubCategoriesData?.items.find((sc) => sc.id === product.subCategoryId);
@@ -130,6 +135,8 @@ export function EditProductModal({ isOpen, onClose, productId }: EditProductModa
           price,
           stock,
           isActive,
+          images: selectedImages,
+          imagesToDelete: imagesToDelete,
         },
       });
       onClose();
@@ -392,6 +399,24 @@ export function EditProductModal({ isOpen, onClose, productId }: EditProductModa
                 onCheckedChange={setIsActive}
               />
               <Label htmlFor="isActive">Active</Label>
+            </div>
+
+            {/* File Upload Section */}
+            <div className="border-t pt-4">
+              <Label className="text-base font-semibold mb-3 block">Product Images</Label>
+              <FileUpload
+                onFilesSelected={setSelectedImages}
+                onRemoveExistingImage={(id) => {
+                  setImagesToDelete((prev) => [...prev, id]);
+                }}
+                existingImages={
+                  product?.images
+                    ?.filter((img) => !imagesToDelete.includes(img.id))
+                    .map((img) => ({ id: img.id, imageUrl: img.imageUrl || "" })) || []
+                }
+                maxFiles={10}
+                maxFileSize={1}
+              />
             </div>
           </div>
         )}

@@ -143,6 +143,54 @@ class ApiService {
     return this.handleResponse<T>(response, options);
   }
 
+  async postFormData<T = any>(
+    url: string,
+    formData: FormData,
+    options: ApiRequestOptions = {}
+  ): Promise<T> {
+    const headers: Record<string, string> = {};
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    if (options.headers) {
+      Object.assign(headers, options.headers);
+    }
+
+    const response = await fetch(`${this.baseUrl}${url}`, {
+      method: "POST",
+      headers,
+      body: formData,
+      credentials: "include",
+    });
+
+    return this.handleResponse<T>(response, options);
+  }
+
+  async patchFormData<T = any>(
+    url: string,
+    formData: FormData,
+    options: ApiRequestOptions = {}
+  ): Promise<T> {
+    const headers: Record<string, string> = {};
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    if (options.headers) {
+      Object.assign(headers, options.headers);
+    }
+
+    const response = await fetch(`${this.baseUrl}${url}`, {
+      method: "PATCH",
+      headers,
+      body: formData,
+      credentials: "include",
+    });
+
+    return this.handleResponse<T>(response, options);
+  }
+
   setAuthToken(token: string): void {
     localStorage.setItem("authToken", token);
   }

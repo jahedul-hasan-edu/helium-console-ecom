@@ -51,14 +51,32 @@ export function useProduct(id: string | undefined) {
 }
 
 /**
- * Hook to create a new product
+ * Hook to create a new product with images
  */
 export function useCreateProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (data: CreateProductRequest) => {
-      return apiService.post<Product>(api.products.create.path, data, {
+      const formData = new FormData();
+      
+      // Add form fields
+      formData.append("subCategoryId", data.subCategoryId);
+      formData.append("subSubCategoryId", data.subSubCategoryId);
+      formData.append("name", data.name);
+      formData.append("description", data.description);
+      formData.append("price", data.price);
+      formData.append("stock", data.stock.toString());
+      formData.append("isActive", data.isActive.toString());
+      
+      // Add images if provided
+      if (data.images && data.images.length > 0) {
+        data.images.forEach((file) => {
+          formData.append("images", file);
+        });
+      }
+      
+      return apiService.postFormData<Product>(api.products.create.path, formData, {
         successMessage: "Product created successfully",
       });
     },
@@ -69,14 +87,39 @@ export function useCreateProduct() {
 }
 
 /**
- * Hook to update an existing product
+ * Hook to update an existing product with images
  */
 export function useUpdateProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateProductRequest }) => {
-      return apiService.patch<Product>(api.products.update.path(id), data, {
+      const formData = new FormData();
+      
+      // Add optional form fields
+      if (data.subCategoryId) formData.append("subCategoryId", data.subCategoryId);
+      if (data.subSubCategoryId) formData.append("subSubCategoryId", data.subSubCategoryId);
+      if (data.name) formData.append("name", data.name);
+      if (data.description) formData.append("description", data.description);
+      if (data.price) formData.append("price", data.price);
+      if (data.stock !== undefined) formData.append("stock", data.stock.toString());
+      if (data.isActive !== undefined) formData.append("isActive", data.isActive.toString());
+      
+      // Add images if provided
+      if (data.images && data.images.length > 0) {
+        data.images.forEach((file) => {
+          formData.append("images", file);
+        });
+      }
+      
+      // Add images to delete if provided
+      if (data.imagesToDelete && data.imagesToDelete.length > 0) {
+        data.imagesToDelete.forEach((id) => {
+          formData.append("imagesToDelete", id);
+        });
+      }
+      
+      return apiService.patchFormData<Product>(api.products.update.path(id), formData, {
         successMessage: "Product updated successfully",
       });
     },

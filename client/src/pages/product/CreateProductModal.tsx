@@ -14,6 +14,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { validateCreateProduct } from "./formValidator";
+import { FileUpload } from "@/components/FileUpload";
 
 interface CreateProductModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export function CreateProductModal({ isOpen, onClose }: CreateProductModalProps)
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState(0);
   const [isActive, setIsActive] = useState(true);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [subCategorySearch, setSubCategorySearch] = useState("");
   const [subSubCategorySearch, setSubSubCategorySearch] = useState("");
@@ -64,6 +66,7 @@ export function CreateProductModal({ isOpen, onClose }: CreateProductModalProps)
       setPrice("");
       setStock(0);
       setIsActive(true);
+      setSelectedImages([]);
       setValidationErrors([]);
       setSubCategorySearch("");
       setSubSubCategorySearch("");
@@ -111,6 +114,7 @@ export function CreateProductModal({ isOpen, onClose }: CreateProductModalProps)
         price,
         stock,
         isActive,
+        images: selectedImages,
       });
       onClose();
     } catch (error) {
@@ -377,6 +381,16 @@ export function CreateProductModal({ isOpen, onClose }: CreateProductModalProps)
               onCheckedChange={setIsActive}
             />
             <Label htmlFor="isActive">Active</Label>
+          </div>
+
+          {/* File Upload Section */}
+          <div className="border-t pt-4">
+            <Label className="text-base font-semibold mb-3 block">Product Images (Optional)</Label>
+            <FileUpload
+              onFilesSelected={setSelectedImages}
+              maxFiles={10}
+              maxFileSize={1}
+            />
           </div>
         </div>
 

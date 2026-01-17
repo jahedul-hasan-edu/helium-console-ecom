@@ -16,8 +16,10 @@ export const createProductSchema = z.object({
   price: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
     message: "Price must be a positive number",
   }),
-  stock: z.number().int("Stock must be an integer").min(0, "Stock must be at least 0"),
-  isActive: z.boolean().default(true),
+  stock: z.union([z.number(), z.string().transform(val => parseInt(val, 10))]).pipe(
+    z.number().int("Stock must be an integer").min(0, "Stock must be at least 0")
+  ),
+  isActive: z.union([z.boolean(), z.string().transform(val => val === 'true' || val === '1')]).default(true),
 }).strict();
 
 export type CreateProductDTO = z.infer<typeof createProductSchema>;
@@ -31,8 +33,11 @@ export const updateProductSchema = z.object({
   price: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
     message: "Price must be a positive number",
   }).optional(),
-  stock: z.number().int("Stock must be an integer").min(0, "Stock must be at least 0").optional(),
-  isActive: z.boolean().optional(),
+  stock: z.union([z.number(), z.string().transform(val => parseInt(val, 10))]).pipe(
+    z.number().int("Stock must be an integer").min(0, "Stock must be at least 0")
+  ).optional(),
+  isActive: z.union([z.boolean(), z.string().transform(val => val === 'true' || val === '1')]).optional(),
+  imagesToDelete: z.array(z.string()).optional(),
 }).strict();
 
 export type UpdateProductDTO = z.infer<typeof updateProductSchema>;
