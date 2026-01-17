@@ -4,15 +4,16 @@
 
 export interface SubSubCategory {
   id: string;
-  tenantId: string | null;
+  tenantId?: string | null;
   subCategoryId: string | null;
+  subCategoryName?: string | null;
   name: string | null;
   slug: string | null;
-  createdBy: string | null;
-  updatedBy: string | null;
-  createdOn: string | null;
-  updatedOn: string | null;
-  userIp: string | null;
+  createdBy?: string | null;
+  updatedBy?: string | null;
+  createdOn?: string | null;
+  updatedOn?: string | null;
+  userIp?: string | null;
 }
 
 export interface CreateSubSubCategoryRequest {

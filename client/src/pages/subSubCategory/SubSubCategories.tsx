@@ -1,16 +1,16 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useSubSubCategories } from "@/hooks/use-SubSubCategory";
-import { useSubCategories } from "@/hooks/use-SubCategory";
-import { PaginatedDataTable, Column } from "@/components/PaginatedDataTable";
-import { ActionButtons } from "@/components/ActionButtons";
+import { PaginatedDataTable } from "@/components/PaginatedDataTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
 import { CreateSubSubCategoryModal } from "./CreateSubSubCategoryModal";
 import { EditSubSubCategoryModal } from "./EditSubSubCategoryModal";
 import { DeleteSubSubCategoryModal } from "./DeleteSubSubCategoryModal";
-import { SUB_SUB_CATEGORY_PAGE_SIZE_OPTIONS, SUB_SUB_CATEGORY_SORT_FIELDS, SUB_SUB_CATEGORY_FEATURE_TITLE, SUB_SUB_CATEGORY_FEATURE_DESCRIPTION } from "./index";
+import { TOTAL_PAGES, COLUMNS } from "./index";
 import type { SubSubCategory } from "@/models/SubSubCategory";
+import { SORT_ORDERS } from "@/lib/constants";
+import { ActionButtons } from "@/components/ActionButtons";
 
 export default function SubSubCategories() {
   const [page, setPage] = useState(1);
@@ -32,34 +32,19 @@ export default function SubSubCategories() {
     sortOrder: sortOrder || undefined,
   });
 
-  // Fetch all sub categories for lookup
-  const { data: subCategoriesData } = useSubCategories({
-    pageSize: 1000, // Fetch all for lookup
-  });
-
-  const subCategoriesMap = useMemo(() => {
-    const map = new Map();
-    if (subCategoriesData?.items) {
-      subCategoriesData.items.forEach((sc) => {
-        map.set(sc.id, sc);
-      });
-    }
-    return map;
-  }, [subCategoriesData]);
-
   const handleSort = (field: string) => {
     if (sortBy === field) {
-      if (sortOrder === "asc") {
-        setSortOrder("desc");
-      } else if (sortOrder === "desc") {
+      if (sortOrder === SORT_ORDERS.ASC) {
+        setSortOrder(SORT_ORDERS.DESC);
+      } else if (sortOrder === SORT_ORDERS.DESC) {
         setSortBy(undefined);
         setSortOrder(undefined);
       } else {
-        setSortOrder("asc");
+        setSortOrder(SORT_ORDERS.ASC);
       }
     } else {
       setSortBy(field);
-      setSortOrder("asc");
+      setSortOrder(SORT_ORDERS.ASC);
     }
   };
 
@@ -73,56 +58,20 @@ export default function SubSubCategories() {
     setDeleteModalOpen(true);
   };
 
-  const columns: Column<SubSubCategory>[] = [
-    {
-      key: "name",
-      label: "Name",
-      sortable: true,
-      render: (_: any, subSubCategory: SubSubCategory) => subSubCategory.name || "-",
-    },
-    {
-      key: "slug",
-      label: "Slug",
-      sortable: true,
-      render: (_: any, subSubCategory: SubSubCategory) => subSubCategory.slug || "-",
-    },
-    {
-      key: "id",
-      label: "Sub Category",
-      sortable: false,
-      render: (_: any, subSubCategory: SubSubCategory) => {
-        if (!subSubCategory.subCategoryId) return "-";
-        const subCategory = subCategoriesMap.get(subSubCategory.subCategoryId);
-        return subCategory?.name || subSubCategory.subCategoryId;
-      },
-    },
-    {
-      key: "createdOn",
-      label: "Created On",
-      sortable: true,
-      render: (_: any, subSubCategory: SubSubCategory) =>
-        subSubCategory.createdOn
-          ? new Date(subSubCategory.createdOn).toLocaleDateString()
-          : "-",
-    },
-    {
-      key: "id",
-      label: "Actions",
-      sortable: false,
-      render: (_: any, subSubCategory: SubSubCategory) => (
-        <ActionButtons
-          onEdit={() => handleEdit(subSubCategory)}
-          onDelete={() => handleDelete(subSubCategory)}
-        />
-      ),
-    },
-  ];
+  const renderActions = (row: any) => (
+      <ActionButtons
+        onEdit={() => handleEdit(row)}
+        onDelete={() => handleDelete(row)}
+      />
+    );
+    
+  const totalPages = TOTAL_PAGES(data!);
 
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">{SUB_SUB_CATEGORY_FEATURE_TITLE}</h1>
-        <p className="text-muted-foreground mt-2">{SUB_SUB_CATEGORY_FEATURE_DESCRIPTION}</p>
+        <h1 className="text-3xl font-bold">Sub Sub Category Management</h1>
+        <p className="text-muted-foreground mt-2">Manage all your sub sub categories here. You can create, edit, and delete sub sub categories as needed.</p>
       </div>
 
       <div className="mb-4 flex items-center justify-between gap-4">
@@ -140,15 +89,15 @@ export default function SubSubCategories() {
         </div>
         <Button onClick={() => setCreateModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Create Sub-Sub-Category
+           Create New Sub-Sub-Category
         </Button>
       </div>
 
       <PaginatedDataTable<SubSubCategory>
-        columns={columns}
+        columns={COLUMNS}
         data={data?.items || []}
         totalItems={data?.total || 0}
-        totalPages={Math.ceil((data?.total || 0) / pageSize)}
+        totalPages={totalPages}
         currentPage={page}
         pageSize={pageSize}
         onPageChange={setPage}
@@ -160,6 +109,7 @@ export default function SubSubCategories() {
         sortBy={sortBy}
         sortOrder={sortOrder}
         isLoading={isLoading}
+        renderActions={renderActions}
       />
 
       <CreateSubSubCategoryModal
