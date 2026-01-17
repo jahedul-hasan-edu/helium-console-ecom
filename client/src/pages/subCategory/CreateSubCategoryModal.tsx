@@ -49,10 +49,11 @@ export function CreateSubCategoryModal({ isOpen, onClose }: CreateSubCategoryMod
     }
   }, [isOpen]);
 
-  const validateField = (field: string, value: any) => {
+  // Reactive validation
+  useEffect(() => {
     const result = validateCreateSubCategory({ categoryId, name, slug });
     setValidationErrors(result.errors);
-  };
+  }, [categoryId, name, slug]);
 
   const handleSlugBlur = async () => {
     if (slug.trim()) {
@@ -124,7 +125,7 @@ export function CreateSubCategoryModal({ isOpen, onClose }: CreateSubCategoryMod
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[460px] p-0">
-                <Command>
+                <Command shouldFilter={false}>
                   <CommandInput
                     placeholder="Search category..."
                     value={categorySearch}
@@ -141,7 +142,6 @@ export function CreateSubCategoryModal({ isOpen, onClose }: CreateSubCategoryMod
                             setCategoryId(category.id);
                             setCategoryName(category.name || "");
                             setCategoryOpen(false);
-                            validateField("categoryId", category.id);
                           }}
                         >
                           <Check
@@ -180,7 +180,6 @@ export function CreateSubCategoryModal({ isOpen, onClose }: CreateSubCategoryMod
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);
-                  validateField("name", e.target.value);
                 }}
                 placeholder="Enter sub-category name"
                 className={nameError ? "border-red-500 pr-8" : ""}
@@ -209,7 +208,6 @@ export function CreateSubCategoryModal({ isOpen, onClose }: CreateSubCategoryMod
                 onChange={(e) => {
                   setSlug(e.target.value);
                   setSlugExists(false);
-                  validateField("slug", e.target.value);
                 }}
                 onBlur={handleSlugBlur}
                 placeholder="Enter sub-category slug"

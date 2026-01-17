@@ -6,6 +6,7 @@ export interface Category {
   id: string;
   tenantId: string | null;
   mainCategoryId: string | null;
+  mainCategoryName: string | null;
   name: string | null;
   slug: string | null;
   createdBy: string | null;

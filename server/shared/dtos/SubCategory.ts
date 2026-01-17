@@ -30,6 +30,7 @@ export const subCategoryResponseSchema = z.object({
   id: z.string().uuid(),
   tenantId: z.string().uuid().nullable(),
   categoryId: z.string().uuid().nullable(),
+  categoryName: z.string().nullable(),
   name: z.string().nullable(),
   slug: z.string().nullable(),
   createdBy: z.string().uuid().nullable(),

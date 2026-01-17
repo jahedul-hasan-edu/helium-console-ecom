@@ -1,6 +1,7 @@
 import { eq, desc, sql, asc, and } from "drizzle-orm";
 import { db } from "server/db";
 import { categories } from "server/db/schemas/categories";
+import { mainCategories } from "server/db/schemas/mainCategories";
 import { CreateCategoryDTO, GetCategoriesOptions, GetCategoriesResponse, UpdateCategoryDTO, CategoryResponseDTO } from "server/shared/dtos/Category";
 import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
 import { CATEGORY_SORT_FIELDS } from "server/shared/constants/feature/categoryMessages";
@@ -16,6 +17,25 @@ export interface IStorageCategory {
 }
 
 export class StorageCategory implements IStorageCategory {
+  // Helper method to build category select query with joins
+  private buildCategorySelectQuery() {
+    return db.select({
+      id: categories.id,
+      tenantId: categories.tenantId,
+      mainCategoryId: categories.mainCategoryId,
+      mainCategoryName: mainCategories.name,
+      name: categories.name,
+      slug: categories.slug,
+      createdBy: categories.createdBy,
+      updatedBy: categories.updatedBy,
+      createdOn: categories.createdOn,
+      updatedOn: categories.updatedOn,
+      userIp: categories.userIp,
+    })
+    .from(categories)
+    .leftJoin(mainCategories, eq(categories.mainCategoryId, mainCategories.id));
+  }
+
   // Categories
   async getCategories(tenantId: string, options?: GetCategoriesOptions): Promise<GetCategoriesResponse> {
     const page = options?.page || PAGINATION_DEFAULTS.PAGE;
@@ -26,13 +46,13 @@ export class StorageCategory implements IStorageCategory {
 
     // Build base query with tenant filter and search
     const baseQuery = search
-      ? db.select().from(categories).where(
+      ? this.buildCategorySelectQuery().where(
           and(
             eq(categories.tenantId, tenantId),
             sql`${categories.name} ILIKE ${"%"+search+"%"} OR ${categories.slug} ILIKE ${"%"+search+"%"}`
           )
         )
-      : db.select().from(categories).where(eq(categories.tenantId, tenantId));
+      : this.buildCategorySelectQuery().where(eq(categories.tenantId, tenantId));
 
     // Get total count
     const countResult = await baseQuery;
@@ -58,7 +78,7 @@ export class StorageCategory implements IStorageCategory {
   }
 
   async getCategory(id: string, tenantId: string): Promise<CategoryResponseDTO | undefined> {
-    const [category] = await db.select().from(categories).where(
+    const [category] = await this.buildCategorySelectQuery().where(
       and(
         eq(categories.id, id),
         eq(categories.tenantId, tenantId)
@@ -68,7 +88,7 @@ export class StorageCategory implements IStorageCategory {
   }
 
   async getCategoryBySlug(slug: string, tenantId: string): Promise<CategoryResponseDTO | undefined> {
-    const [category] = await db.select().from(categories).where(
+    const [category] = await this.buildCategorySelectQuery().where(
       and(
         eq(categories.slug, slug),
         eq(categories.tenantId, tenantId)
@@ -78,7 +98,7 @@ export class StorageCategory implements IStorageCategory {
   }
 
   async createCategory(insertCategory: CreateCategoryDTO & { tenantId: string; userIp: string }): Promise<CategoryResponseDTO> {
-    const [category] = await db.insert(categories).values({
+    const [insertedCategory] = await db.insert(categories).values({
       tenantId: insertCategory.tenantId,
       mainCategoryId: insertCategory.mainCategoryId,
       name: insertCategory.name,
@@ -88,11 +108,19 @@ export class StorageCategory implements IStorageCategory {
       updatedOn: new Date(),
     }).returning();
 
+    // Fetch the created category with joined data
+    const [category] = await this.buildCategorySelectQuery().where(
+      and(
+        eq(categories.id, insertedCategory.id),
+        eq(categories.tenantId, insertCategory.tenantId)
+      )
+    );
+
     return category;
   }
 
   async updateCategory(id: string, tenantId: string, updates: UpdateCategoryDTO & { userIp: string }): Promise<CategoryResponseDTO> {
-    const [category] = await db.update(categories)
+    const [updatedCategory] = await db.update(categories)
       .set({
         ...updates,
         updatedOn: new Date(),
@@ -104,6 +132,14 @@ export class StorageCategory implements IStorageCategory {
         )
       )
       .returning();
+
+    // Fetch the updated category with joined data
+    const [category] = await this.buildCategorySelectQuery().where(
+      and(
+        eq(categories.id, updatedCategory.id),
+        eq(categories.tenantId, tenantId)
+      )
+    );
 
     return category;
   }

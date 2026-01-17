@@ -1,6 +1,7 @@
-import { eq, desc, sql, asc, and } from "drizzle-orm";
+import { eq, desc, sql, asc, and, leftJoin } from "drizzle-orm";
 import { db } from "server/db";
 import { subCategories } from "server/db/schemas/subCategories";
+import { categories } from "server/db/schemas/categories";
 import { CreateSubCategoryDTO, GetSubCategoriesOptions, GetSubCategoriesResponse, UpdateSubCategoryDTO, SubCategoryResponseDTO } from "server/shared/dtos/SubCategory";
 import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
 import { SUB_CATEGORY_SORT_FIELDS } from "server/shared/constants/feature/subCategoryMessages";
@@ -16,6 +17,25 @@ export interface IStorageSubCategory {
 }
 
 export class StorageSubCategory implements IStorageSubCategory {
+  // Helper method to build subCategory select query with joins
+  private buildSubCategorySelectQuery() {
+    return db.select({
+      id: subCategories.id,
+      tenantId: subCategories.tenantId,
+      categoryId: subCategories.categoryId,
+      categoryName: categories.name,
+      name: subCategories.name,
+      slug: subCategories.slug,
+      createdBy: subCategories.createdBy,
+      updatedBy: subCategories.updatedBy,
+      createdOn: subCategories.createdOn,
+      updatedOn: subCategories.updatedOn,
+      userIp: subCategories.userIp,
+    })
+    .from(subCategories)
+    .leftJoin(categories, eq(subCategories.categoryId, categories.id));
+  }
+
   // SubCategories
   async getSubCategories(tenantId: string, options?: GetSubCategoriesOptions): Promise<GetSubCategoriesResponse> {
     const page = options?.page || PAGINATION_DEFAULTS.PAGE;
@@ -26,13 +46,13 @@ export class StorageSubCategory implements IStorageSubCategory {
 
     // Build base query with tenant filter and search
     const baseQuery = search
-      ? db.select().from(subCategories).where(
+      ? this.buildSubCategorySelectQuery().where(
           and(
             eq(subCategories.tenantId, tenantId),
             sql`${subCategories.name} ILIKE ${"%"+search+"%"} OR ${subCategories.slug} ILIKE ${"%"+search+"%"}`
           )
         )
-      : db.select().from(subCategories).where(eq(subCategories.tenantId, tenantId));
+      : this.buildSubCategorySelectQuery().where(eq(subCategories.tenantId, tenantId));
 
     // Get total count
     const countResult = await baseQuery;
@@ -58,7 +78,7 @@ export class StorageSubCategory implements IStorageSubCategory {
   }
 
   async getSubCategory(id: string, tenantId: string): Promise<SubCategoryResponseDTO | undefined> {
-    const [subCategory] = await db.select().from(subCategories).where(
+    const [subCategory] = await this.buildSubCategorySelectQuery().where(
       and(
         eq(subCategories.id, id),
         eq(subCategories.tenantId, tenantId)
@@ -68,7 +88,7 @@ export class StorageSubCategory implements IStorageSubCategory {
   }
 
   async getSubCategoryBySlug(slug: string, tenantId: string): Promise<SubCategoryResponseDTO | undefined> {
-    const [subCategory] = await db.select().from(subCategories).where(
+    const [subCategory] = await this.buildSubCategorySelectQuery().where(
       and(
         eq(subCategories.slug, slug),
         eq(subCategories.tenantId, tenantId)
@@ -78,7 +98,7 @@ export class StorageSubCategory implements IStorageSubCategory {
   }
 
   async createSubCategory(insertSubCategory: CreateSubCategoryDTO & { tenantId: string; userIp: string }): Promise<SubCategoryResponseDTO> {
-    const [subCategory] = await db.insert(subCategories).values({
+    const [insertedSubCategory] = await db.insert(subCategories).values({
       tenantId: insertSubCategory.tenantId,
       categoryId: insertSubCategory.categoryId,
       name: insertSubCategory.name,
@@ -88,11 +108,19 @@ export class StorageSubCategory implements IStorageSubCategory {
       updatedOn: new Date(),
     }).returning();
 
+    // Fetch the created subCategory with joined data
+    const [subCategory] = await this.buildSubCategorySelectQuery().where(
+      and(
+        eq(subCategories.id, insertedSubCategory.id),
+        eq(subCategories.tenantId, insertSubCategory.tenantId)
+      )
+    );
+
     return subCategory;
   }
 
   async updateSubCategory(id: string, tenantId: string, updates: UpdateSubCategoryDTO & { userIp: string }): Promise<SubCategoryResponseDTO> {
-    const [subCategory] = await db.update(subCategories)
+    const [updatedSubCategory] = await db.update(subCategories)
       .set({
         ...updates,
         updatedOn: new Date(),
@@ -104,6 +132,14 @@ export class StorageSubCategory implements IStorageSubCategory {
         )
       )
       .returning();
+
+    // Fetch the updated subCategory with joined data
+    const [subCategory] = await this.buildSubCategorySelectQuery().where(
+      and(
+        eq(subCategories.id, updatedSubCategory.id),
+        eq(subCategories.tenantId, tenantId)
+      )
+    );
 
     return subCategory;
   }

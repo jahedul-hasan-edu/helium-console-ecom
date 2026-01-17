@@ -1,6 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useSubCategories } from "@/hooks/use-SubCategory";
-import { useCategories } from "@/hooks/use-Category";
 import { PaginatedDataTable, Column } from "@/components/PaginatedDataTable";
 import { ActionButtons } from "@/components/ActionButtons";
 import { Button } from "@/components/ui/button";
@@ -31,21 +30,6 @@ export default function SubCategories() {
     sortBy: sortBy || undefined,
     sortOrder: sortOrder || undefined,
   });
-
-  // Fetch all categories for lookup
-  const { data: categoriesData } = useCategories({
-    pageSize: 1000, // Fetch all for lookup
-  });
-
-  const categoriesMap = useMemo(() => {
-    const map = new Map();
-    if (categoriesData?.items) {
-      categoriesData.items.forEach((c) => {
-        map.set(c.id, c);
-      });
-    }
-    return map;
-  }, [categoriesData]);
 
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -91,9 +75,7 @@ export default function SubCategories() {
       label: "Category",
       sortable: false,
       render: (_: any, subCategory: SubCategory) => {
-        if (!subCategory.categoryId) return "-";
-        const category = categoriesMap.get(subCategory.categoryId);
-        return category?.name || subCategory.categoryId;
+        return subCategory.categoryName || "-";
       },
     },
     {

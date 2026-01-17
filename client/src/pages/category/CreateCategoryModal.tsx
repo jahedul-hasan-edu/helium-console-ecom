@@ -49,10 +49,11 @@ export function CreateCategoryModal({ isOpen, onClose }: CreateCategoryModalProp
     }
   }, [isOpen]);
 
-  const validateField = (field: string, value: any) => {
+  // Reactive validation
+  useEffect(() => {
     const result = validateCreateCategory({ mainCategoryId, name, slug });
     setValidationErrors(result.errors);
-  };
+  }, [mainCategoryId, name, slug]);
 
   const handleSlugBlur = async () => {
     if (slug.trim()) {
@@ -124,7 +125,7 @@ export function CreateCategoryModal({ isOpen, onClose }: CreateCategoryModalProp
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[460px] p-0">
-                <Command>
+                <Command shouldFilter={false}>
                   <CommandInput
                     placeholder="Search main category..."
                     value={mainCategorySearch}
@@ -141,7 +142,6 @@ export function CreateCategoryModal({ isOpen, onClose }: CreateCategoryModalProp
                             setMainCategoryId(mainCategory.id);
                             setMainCategoryName(mainCategory.name || "");
                             setMainCategoryOpen(false);
-                            validateField("mainCategoryId", mainCategory.id);
                           }}
                         >
                           <Check
@@ -180,7 +180,6 @@ export function CreateCategoryModal({ isOpen, onClose }: CreateCategoryModalProp
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);
-                  validateField("name", e.target.value);
                 }}
                 placeholder="Enter category name"
                 className={nameError ? "border-red-500 pr-8" : ""}
@@ -209,7 +208,6 @@ export function CreateCategoryModal({ isOpen, onClose }: CreateCategoryModalProp
                 onChange={(e) => {
                   setSlug(e.target.value);
                   setSlugExists(false);
-                  validateField("slug", e.target.value);
                 }}
                 onBlur={handleSlugBlur}
                 placeholder="Enter category slug"

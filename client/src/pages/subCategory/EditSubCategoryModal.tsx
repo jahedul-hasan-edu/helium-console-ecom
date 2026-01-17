@@ -44,9 +44,7 @@ export function EditSubCategoryModal({ isOpen, onClose, subCategoryId }: EditSub
   useEffect(() => {
     if (isOpen && subCategory) {
       setCategoryId(subCategory.categoryId || "");
-      setCategoryName(
-        categories.find((c) => c.id === subCategory.categoryId)?.name || ""
-      );
+      setCategoryName(subCategory.categoryName || "");
       setName(subCategory.name || "");
       setSlug(subCategory.slug || "");
       setOriginalSlug(subCategory.slug || "");
@@ -66,10 +64,11 @@ export function EditSubCategoryModal({ isOpen, onClose, subCategoryId }: EditSub
     }
   }, [categories, categoryId]);
 
-  const validateField = (field: string, value: any) => {
+  // Reactive validation
+  useEffect(() => {
     const result = validateUpdateSubCategory({ categoryId, name, slug });
     setValidationErrors(result.errors);
-  };
+  }, [categoryId, name, slug]);
 
   const handleSlugBlur = async () => {
     if (slug.trim() && slug !== originalSlug) {
@@ -144,7 +143,7 @@ export function EditSubCategoryModal({ isOpen, onClose, subCategoryId }: EditSub
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[460px] p-0">
-                <Command>
+                <Command shouldFilter={false}>
                   <CommandInput
                     placeholder="Search category..."
                     value={categorySearch}
@@ -161,7 +160,6 @@ export function EditSubCategoryModal({ isOpen, onClose, subCategoryId }: EditSub
                             setCategoryId(category.id);
                             setCategoryName(category.name || "");
                             setCategoryOpen(false);
-                            validateField("categoryId", category.id);
                           }}
                         >
                           <Check
@@ -200,7 +198,6 @@ export function EditSubCategoryModal({ isOpen, onClose, subCategoryId }: EditSub
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);
-                  validateField("name", e.target.value);
                 }}
                 placeholder="Enter sub-category name"
                 className={nameError ? "border-red-500 pr-8" : ""}
@@ -229,7 +226,6 @@ export function EditSubCategoryModal({ isOpen, onClose, subCategoryId }: EditSub
                 onChange={(e) => {
                   setSlug(e.target.value);
                   setSlugExists(false);
-                  validateField("slug", e.target.value);
                 }}
                 onBlur={handleSlugBlur}
                 placeholder="Enter sub-category slug"

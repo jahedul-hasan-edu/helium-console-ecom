@@ -1,6 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useCategories } from "@/hooks/use-Category";
-import { useMainCategories } from "@/hooks/use-MainCategory";
 import { PaginatedDataTable, Column } from "@/components/PaginatedDataTable";
 import { ActionButtons } from "@/components/ActionButtons";
 import { Button } from "@/components/ui/button";
@@ -31,21 +30,6 @@ export default function Categories() {
     sortBy: sortBy || undefined,
     sortOrder: sortOrder || undefined,
   });
-
-  // Fetch all main categories for lookup
-  const { data: mainCategoriesData } = useMainCategories({
-    pageSize: 1000, // Fetch all for lookup
-  });
-
-  const mainCategoriesMap = useMemo(() => {
-    const map = new Map();
-    if (mainCategoriesData?.items) {
-      mainCategoriesData.items.forEach((mc) => {
-        map.set(mc.id, mc);
-      });
-    }
-    return map;
-  }, [mainCategoriesData]);
 
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -91,9 +75,7 @@ export default function Categories() {
       label: "Main Category",
       sortable: false,
       render: (_: any, category: Category) => {
-        if (!category.mainCategoryId) return "-";
-        const mainCategory = mainCategoriesMap.get(category.mainCategoryId);
-        return mainCategory?.name || category.mainCategoryId;
+        return category.mainCategoryName || "-";
       },
     },
     {
