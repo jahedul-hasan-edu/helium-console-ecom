@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCreateSubCategory, useCheckSubCategorySlug } from "@/hooks/use-SubCategory";
 import { useCategories } from "@/hooks/use-Category";
-import { validateCreateSubCategory, getFieldError, ValidationError } from "@/lib/formValidator";
+import {  getFieldError, ValidationError } from "@/lib/formValidator";
 import { AlertCircle, Check, ChevronsUpDown } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { validateCreateSubCategory } from "./formValidator";
 
 interface CreateSubCategoryModalProps {
   isOpen: boolean;

@@ -58,27 +58,6 @@ export default function Products() {
     sortOrder,
   });
 
-  // Fetch sub categories and sub-sub categories for display
-  const { data: subCategoriesData } = useSubCategories({ pageSize: 1000 });
-  const { data: subSubCategoriesData } = useSubSubCategories({ pageSize: 1000 });
-
-  // Create lookup maps
-  const subCategoriesMap = useMemo(() => {
-    const map = new Map<string, string>();
-    subCategoriesData?.items.forEach((sc) => {
-      map.set(sc.id, sc.name || "");
-    });
-    return map;
-  }, [subCategoriesData]);
-
-  const subSubCategoriesMap = useMemo(() => {
-    const map = new Map<string, string>();
-    subSubCategoriesData?.items.forEach((ssc) => {
-      map.set(ssc.id, ssc.name || "");
-    });
-    return map;
-  }, [subSubCategoriesData]);
-
   const handleSearch = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1);

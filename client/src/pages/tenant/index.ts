@@ -61,7 +61,7 @@ export const ACTION_BUTTONS = {
   VARIANT: "ghost" as const,
 };
 
-export const COLUMNS: Column<Tenant>[] = [
+export const BASE_COLUMNS: Column<Tenant>[] = [
     {
       key: "name",
       label: TENANT_COLUMNS_LABEL.NAME,
@@ -79,6 +79,9 @@ export const COLUMNS: Column<Tenant>[] = [
       render: (value) => (value ? "Yes" : "No"),
     },
 ];
+
+// For backward compatibility
+export const COLUMNS = BASE_COLUMNS;
 
 // Form field labels and validation
 export const TENANT_FORM = {

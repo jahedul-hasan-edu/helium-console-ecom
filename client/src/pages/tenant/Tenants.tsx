@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Search, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateTenant, useTenants, useCreateTenant, useDeleteTenant, useGetTenant } from "@/hooks/use-Tenant";
@@ -9,8 +10,9 @@ import { EditTenantModal } from "@/pages/tenant/EditTenantModal";
 import { DeleteTenantModal } from "@/pages/tenant/DeleteTenantModal";
 import { PaginatedDataTable } from "@/components/PaginatedDataTable";
 import { ActionButtons } from "@/components/ActionButtons";
-import { COLUMNS, TENANTS_PAGE, BUTTON_LABELS, ERROR_MESSAGES, ACTION_BUTTONS, SORTABLE_FIELDS, SORT_CONFIG, type SortField, type SortOrder, TOTAL_PAGES } from "@/pages/tenant";
+import { BASE_COLUMNS, TENANTS_PAGE, BUTTON_LABELS, ERROR_MESSAGES, ACTION_BUTTONS, SORTABLE_FIELDS, SORT_CONFIG, type SortField, type SortOrder, TOTAL_PAGES } from "@/pages/tenant";
 import type { Tenant } from "@/models/Tenant";
+import type { Column } from "@/components/PaginatedDataTable";
 
 export default function Tenants() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -24,6 +26,27 @@ export default function Tenants() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+
+  // Build columns with render function for isActive
+  const COLUMNS: Column<Tenant>[] = useMemo(() => 
+    BASE_COLUMNS.map(col => {
+      if (col.key === 'isActive') {
+        return {
+          ...col,
+          render: (value: any) => (
+            <Badge 
+              variant={value ? "default" : "destructive"} 
+              className={value ? "bg-green-500 hover:bg-green-600" : ""}
+            >
+              {value ? "Active" : "Inactive"}
+            </Badge>
+          )
+        };
+      }
+      return col;
+    }),
+    []
+  );
 
   const { data: tenantsData, isLoading, refetch } = useTenants({
     page: currentPage,

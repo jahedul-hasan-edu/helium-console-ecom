@@ -8,11 +8,12 @@ import { Switch } from "@/components/ui/switch";
 import { useCreateProduct } from "@/hooks/use-Product";
 import { useSubCategories } from "@/hooks/use-SubCategory";
 import { useSubSubCategories } from "@/hooks/use-SubSubCategory";
-import { validateCreateProduct, getFieldError, ValidationError } from "@/lib/formValidator";
+import {  getFieldError, ValidationError } from "@/lib/formValidator";
 import { AlertCircle, Check, ChevronsUpDown } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { validateCreateProduct } from "./formValidator";
 
 interface CreateProductModalProps {
   isOpen: boolean;
