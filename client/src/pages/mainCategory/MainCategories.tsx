@@ -44,12 +44,14 @@ export default function MainCategories() {
     setCurrentPage(1);
   };
 
-  const handleEdit = (mainCategoryId: string) => {
+  const handleEdit = (mainCategoryId: string | undefined) => {
+    if (!mainCategoryId) return;
     setSelectedMainCategoryId(mainCategoryId);
     setShowEditModal(true);
   };
 
-  const handleDelete = (mainCategoryId: string) => {
+  const handleDelete = (mainCategoryId: string | undefined) => {
+    if (!mainCategoryId) return;
     setSelectedMainCategoryId(mainCategoryId);
     setShowDeleteModal(true);
   };
@@ -108,15 +110,12 @@ export default function MainCategories() {
     setCurrentPage(1);
   };
 
-  const renderActions = (mainCategory: MainCategory) => (
-    <ActionButtons
-      onEdit={() => handleEdit(mainCategory.id)}
-      onDelete={() => handleDelete(mainCategory.id)}
-      showLabel={ACTION_BUTTONS.SHOW_LABEL}
-      size={ACTION_BUTTONS.SIZE}
-      variant={ACTION_BUTTONS.VARIANT}
-    />
-  );
+  const renderActions = (row: MainCategory) => (
+      <ActionButtons
+        onEdit={() => handleEdit(row?.id)}
+        onDelete={() => handleDelete(row?.id)}
+      />
+    );
 
   const totalPages = TOTAL_PAGES(mainCategoriesData!);
 

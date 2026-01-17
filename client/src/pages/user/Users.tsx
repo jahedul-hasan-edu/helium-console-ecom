@@ -108,15 +108,12 @@ export default function Users() {
     setCurrentPage(1);
   };
 
-  const renderActions = (user: User) => (
+  const renderActions = (row: User) => (
     <ActionButtons
-      onEdit={() => handleEdit(user.id)}
-      onDelete={() => handleDelete(user.id)}
-      showLabel={ACTION_BUTTONS.SHOW_LABEL}
-      size={ACTION_BUTTONS.SIZE}
-      variant={ACTION_BUTTONS.VARIANT}
-    />
-  );
+      onEdit={() => handleEdit(row?.id)}
+      onDelete={() => handleDelete(row?.id)}
+      />
+    );
 
   const totalPages = TOTAL_PAGES(usersData!);
 

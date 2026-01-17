@@ -44,12 +44,14 @@ export default function Tenants() {
     setCurrentPage(1);
   };
 
-  const handleEdit = (tenantId: string) => {
+  const handleEdit = (tenantId: string | undefined) => {
+    if (!tenantId) return;
     setSelectedTenantId(tenantId);
     setShowEditModal(true);
   };
 
-  const handleDelete = (tenantId: string) => {
+  const handleDelete = (tenantId: string | undefined) => {
+    if (!tenantId) return;
     setSelectedTenantId(tenantId);
     setShowDeleteModal(true);
   };
@@ -108,15 +110,12 @@ export default function Tenants() {
     setCurrentPage(1);
   };
 
-  const renderActions = (tenant: Tenant) => (
-    <ActionButtons
-      onEdit={() => handleEdit(tenant.id)}
-      onDelete={() => handleDelete(tenant.id)}
-      showLabel={ACTION_BUTTONS.SHOW_LABEL}
-      size={ACTION_BUTTONS.SIZE}
-      variant={ACTION_BUTTONS.VARIANT}
-    />
-  );
+  const renderActions = (row: Tenant) => (
+      <ActionButtons
+        onEdit={() => handleEdit(row?.id)}
+        onDelete={() => handleDelete(row?.id)}
+      />
+    );
 
   const totalPages = TOTAL_PAGES(tenantsData!);
 

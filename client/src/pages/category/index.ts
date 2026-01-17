@@ -2,6 +2,10 @@
  * Category feature constants
  */
 
+import { Column } from "@/components/DataTable";
+import { ListResponse } from "@/lib/interface";
+import { Category } from "@/models/Category";
+
 // Page size options for pagination
 export const CATEGORY_PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 40, 50];
 
@@ -14,17 +18,34 @@ export const CATEGORY_SORT_FIELDS = {
 
 export type CategorySortField = (typeof CATEGORY_SORT_FIELDS)[keyof typeof CATEGORY_SORT_FIELDS];
 
-// Column definitions for data table
-export const CATEGORY_COLUMNS = [
-  { key: "name", label: "Name", sortable: true },
-  { key: "slug", label: "Slug", sortable: true },
-  { key: "mainCategoryId", label: "Main Category", sortable: false },
-  { key: "createdOn", label: "Created On", sortable: true },
-  { key: "actions", label: "Actions", sortable: false },
-] as const;
+export const COLUMNS_LABEL = {
+  NAME: "Name",
+  SLUG: "Slug",
+  MAIN_CATEGORY: "Main Category",
+};
 
-// Category feature title
-export const CATEGORY_FEATURE_TITLE = "Category Management";
 
-// Category feature description
-export const CATEGORY_FEATURE_DESCRIPTION = "Manage your product categories";
+export const COLUMNS: Column<Category>[] = [
+    {
+      key: "name",
+      label: COLUMNS_LABEL.NAME,
+      sortable: true,
+      render: (_: any, category: Category) => category.name || "-",
+    },
+    {
+      key: "slug",
+      label: COLUMNS_LABEL.SLUG,
+      sortable: true,
+      render: (_: any, category: Category) => category.slug || "-",
+    },
+    {
+      key: "id",
+      label: COLUMNS_LABEL.MAIN_CATEGORY,
+      sortable: false,
+      render: (_: any, category: Category) => {
+        return category.mainCategoryName || "-";
+      },
+    }
+  ];
+
+  export const TOTAL_PAGES = (data: ListResponse<Category>) => data ? Math.ceil(data.total / data.pageSize) : 0;

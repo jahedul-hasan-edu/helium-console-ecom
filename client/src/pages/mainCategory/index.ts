@@ -67,16 +67,19 @@ export const COLUMNS: Column<MainCategory>[] = [
       key: "name",
       label: MAIN_CATEGORY_COLUMNS_LABEL.NAME,
       sortable: true,
+      render: (_: any, mainCategory: MainCategory) => mainCategory.name || "-",
     },
     {
       key: "slug",
       label: MAIN_CATEGORY_COLUMNS_LABEL.SLUG,
       sortable: true,
+      render: (_: any, mainCategory: MainCategory) => mainCategory.slug || "-",
     },
     {
       key: "orderIndex",
       label: MAIN_CATEGORY_COLUMNS_LABEL.ORDER_INDEX,
       sortable: true,
+      render: (_: any, mainCategory: MainCategory) => mainCategory.orderIndex !== null ? mainCategory.orderIndex : "-",
     },
 ];
 

@@ -41,15 +41,15 @@ export function useCategory(id: string) {
   });
 }
 
-export function useCheckCategorySlug() {
-  return useQuery({
-    queryKey: ["checkCategorySlug"],
-    queryFn: async () => null,
-    enabled: false,
-  });
-}
+// export function useCheckCategorySlug() {
+//   return useQuery({
+//     queryKey: ["checkCategorySlug"],
+//     queryFn: async () => null,
+//     enabled: false,
+//   });
+// }
 
-export function useCheckCategorySlugMutation() {
+export function useCheckCategorySlug() {
   return useMutation<{ exists: boolean; category: Category | null }, Error, string>({
     mutationFn: (slug: string) =>
       apiService.get<{ exists: boolean; category: Category | null }>(

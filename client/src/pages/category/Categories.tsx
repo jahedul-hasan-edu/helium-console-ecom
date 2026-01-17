@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useCategories } from "@/hooks/use-Category";
-import { PaginatedDataTable, Column } from "@/components/PaginatedDataTable";
+import { PaginatedDataTable } from "@/components/PaginatedDataTable";
 import { ActionButtons } from "@/components/ActionButtons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +8,9 @@ import { Plus, Search } from "lucide-react";
 import { CreateCategoryModal } from "./CreateCategoryModal";
 import { EditCategoryModal } from "./EditCategoryModal";
 import { DeleteCategoryModal } from "./DeleteCategoryModal";
-import { CATEGORY_PAGE_SIZE_OPTIONS, CATEGORY_SORT_FIELDS, CATEGORY_FEATURE_TITLE, CATEGORY_FEATURE_DESCRIPTION } from "./index";
+import { COLUMNS, TOTAL_PAGES } from "./index";
 import type { Category } from "@/models/Category";
+import { SORT_ORDERS } from "@/lib/constants";
 
 export default function Categories() {
   const [page, setPage] = useState(1);
@@ -33,17 +34,17 @@ export default function Categories() {
 
   const handleSort = (field: string) => {
     if (sortBy === field) {
-      if (sortOrder === "asc") {
-        setSortOrder("desc");
-      } else if (sortOrder === "desc") {
+      if (sortOrder === SORT_ORDERS.ASC) {
+        setSortOrder(SORT_ORDERS.DESC);
+      } else if (sortOrder === SORT_ORDERS.DESC) {
         setSortBy(undefined);
         setSortOrder(undefined);
       } else {
-        setSortOrder("asc");
+        setSortOrder(SORT_ORDERS.ASC);
       }
     } else {
       setSortBy(field);
-      setSortOrder("asc");
+      setSortOrder(SORT_ORDERS.ASC);
     }
   };
 
@@ -57,54 +58,20 @@ export default function Categories() {
     setDeleteModalOpen(true);
   };
 
-  const columns: Column<Category>[] = [
-    {
-      key: "name",
-      label: "Name",
-      sortable: true,
-      render: (_: any, category: Category) => category.name || "-",
-    },
-    {
-      key: "slug",
-      label: "Slug",
-      sortable: true,
-      render: (_: any, category: Category) => category.slug || "-",
-    },
-    {
-      key: "id",
-      label: "Main Category",
-      sortable: false,
-      render: (_: any, category: Category) => {
-        return category.mainCategoryName || "-";
-      },
-    },
-    {
-      key: "createdOn",
-      label: "Created On",
-      sortable: true,
-      render: (_: any, category: Category) =>
-        category.createdOn
-          ? new Date(category.createdOn).toLocaleDateString()
-          : "-",
-    },
-    {
-      key: "id",
-      label: "Actions",
-      sortable: false,
-      render: (_: any, category: Category) => (
+  const renderActions = (row: any) => (
         <ActionButtons
-          onEdit={() => handleEdit(category)}
-          onDelete={() => handleDelete(category)}
+          onEdit={() => handleEdit(row)}
+          onDelete={() => handleDelete(row)}
         />
-      ),
-    },
-  ];
+      );
+      
+    const totalPages = TOTAL_PAGES(data!);
 
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">{CATEGORY_FEATURE_TITLE}</h1>
-        <p className="text-muted-foreground mt-2">{CATEGORY_FEATURE_DESCRIPTION}</p>
+        <h1 className="text-3xl font-bold">Category Management</h1>
+        <p className="text-muted-foreground mt-2">Manage your product categories</p>
       </div>
 
       <div className="mb-4 flex items-center justify-between gap-4">
@@ -127,10 +94,10 @@ export default function Categories() {
       </div>
 
       <PaginatedDataTable<Category>
-        columns={columns}
+        columns={COLUMNS}
         data={data?.items || []}
         totalItems={data?.total || 0}
-        totalPages={Math.ceil((data?.total || 0) / pageSize)}
+        totalPages={totalPages}
         currentPage={page}
         pageSize={pageSize}
         onPageChange={setPage}
@@ -142,6 +109,7 @@ export default function Categories() {
         sortBy={sortBy}
         sortOrder={sortOrder}
         isLoading={isLoading}
+        renderActions={renderActions}
       />
 
       <CreateCategoryModal
