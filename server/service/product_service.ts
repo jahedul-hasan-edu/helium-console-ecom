@@ -36,17 +36,17 @@ export const productService = {
     const tenantId = DEFAULT_TENANT_ID;
     const userIp = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
     const data: CreateProductDTO = req.body;
-    return await storageProduct.createProduct({ ...data, tenantId, userIp });
+    await storageProduct.createProduct({ ...data, tenantId, userIp });
   },
 
   async updateProduct(id: string, req: Request) {
     const tenantId = DEFAULT_TENANT_ID;
     const userIp = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
     const updates: UpdateProductDTO = req.body;
-    return await storageProduct.updateProduct(id, tenantId, { ...updates, userIp });
+    await storageProduct.updateProduct(id, tenantId, { ...updates, userIp });
   },
 
   async deleteProduct(id: string, tenantId: string = DEFAULT_TENANT_ID) {
-    return await storageProduct.deleteProduct(id, tenantId);
+    await storageProduct.deleteProduct(id, tenantId);
   },
 };

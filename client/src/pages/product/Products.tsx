@@ -9,10 +9,11 @@ import { useSubSubCategories } from "@/hooks/use-SubSubCategory";
 import { CreateProductModal } from "./CreateProductModal";
 import { EditProductModal } from "./EditProductModal";
 import { DeleteProductModal } from "./DeleteProductModal";
-import { PRODUCT_PAGE, COLUMNS, type SortField, type SortOrder, TOTAL_PAGES } from "./index";
+import { PRODUCT_PAGE, BASE_COLUMNS, type SortField, type SortOrder, TOTAL_PAGES } from "./index";
 import { Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/models/Product";
+import { Column } from "@/components/PaginatedDataTable";
 
 export default function Products() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,6 +27,27 @@ export default function Products() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedProductName, setSelectedProductName] = useState("");
+
+  // Build columns with render function for isActive
+  const COLUMNS: Column<Product>[] = useMemo(() => 
+    BASE_COLUMNS.map(col => {
+      if (col.key === 'isActive') {
+        return {
+          ...col,
+          render: (value: any) => (
+            <Badge 
+              variant={value ? "default" : "destructive"} 
+              className={value ? "bg-green-500 hover:bg-green-600" : ""}
+            >
+              {value ? "Active" : "Inactive"}
+            </Badge>
+          )
+        };
+      }
+      return col;
+    }),
+    []
+  );
 
   // Fetch products with pagination
   const { data: productsData, isLoading, error } = useProducts({
@@ -142,7 +164,7 @@ export default function Products() {
         sortOrder={sortOrder}
         isLoading={isLoading}
         emptyMessage={PRODUCT_PAGE.emptyMessage} totalItems={productsData?.total || 0}
-        renderActions={renderActions}   
+        renderActions={renderActions}
            />
 
       {/* Modals */}

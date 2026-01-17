@@ -7,6 +7,8 @@ export interface Product {
   tenantId: string | null;
   subCategoryId: string | null;
   subSubCategoryId: string | null;
+  subCategoryName: string | null;
+  subSubCategoryName: string | null;
   name: string | null;
   description: string | null;
   price: string | null;

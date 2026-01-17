@@ -69,18 +69,21 @@ export function CreateProductModal({ isOpen, onClose }: CreateProductModalProps)
     }
   }, [isOpen]);
 
-  const validateField = () => {
-    const result = validateCreateProduct({
-      subCategoryId,
-      subSubCategoryId,
-      name,
-      description,
-      price,
-      stock,
-      isActive,
-    });
-    setValidationErrors(result.errors);
-  };
+  // Validate on field changes
+  useEffect(() => {
+    if (subCategoryId || subSubCategoryId || name || description || price || stock > 0) {
+      const result = validateCreateProduct({
+        subCategoryId,
+        subSubCategoryId,
+        name,
+        description,
+        price,
+        stock,
+        isActive,
+      });
+      setValidationErrors(result.errors);
+    }
+  }, [subCategoryId, subSubCategoryId, name, description, price, stock, isActive]);
 
   const handleSubmit = async () => {
     const result = validateCreateProduct({
@@ -135,6 +138,8 @@ export function CreateProductModal({ isOpen, onClose }: CreateProductModalProps)
     price &&
     stock >= 0;
 
+  
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -185,7 +190,6 @@ export function CreateProductModal({ isOpen, onClose }: CreateProductModalProps)
                             setSubCategoryId(subCategory.id);
                             setSubCategoryName(subCategory.name || "");
                             setSubCategoryOpen(false);
-                            validateField();
                           }}
                         >
                           <Check
@@ -249,7 +253,6 @@ export function CreateProductModal({ isOpen, onClose }: CreateProductModalProps)
                             setSubSubCategoryId(subSubCategory.id);
                             setSubSubCategoryName(subSubCategory.name || "");
                             setSubSubCategoryOpen(false);
-                            validateField();
                           }}
                         >
                           <Check
@@ -284,7 +287,6 @@ export function CreateProductModal({ isOpen, onClose }: CreateProductModalProps)
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
-                validateField();
               }}
               placeholder="Enter product name"
               className={nameError ? "border-red-500" : ""}
@@ -307,7 +309,6 @@ export function CreateProductModal({ isOpen, onClose }: CreateProductModalProps)
               value={description}
               onChange={(e) => {
                 setDescription(e.target.value);
-                validateField();
               }}
               placeholder="Enter product description"
               className={descriptionError ? "border-red-500" : ""}
@@ -332,7 +333,6 @@ export function CreateProductModal({ isOpen, onClose }: CreateProductModalProps)
               value={price}
               onChange={(e) => {
                 setPrice(e.target.value);
-                validateField();
               }}
               placeholder="0.00"
               className={priceError ? "border-red-500" : ""}
@@ -356,7 +356,6 @@ export function CreateProductModal({ isOpen, onClose }: CreateProductModalProps)
               value={stock}
               onChange={(e) => {
                 setStock(parseInt(e.target.value) || 0);
-                validateField();
               }}
               placeholder="0"
               className={stockError ? "border-red-500" : ""}

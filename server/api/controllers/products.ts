@@ -34,7 +34,7 @@ export function registerProductRoutes(app: Express) {
       const validatedData = createProductSchema.parse(req.body);
       req.body = validatedData;
       const product = await productService.createProduct(req);
-      return ResponseHandler.success(res, PRODUCT_MESSAGES.RECORD_CREATED,product , HTTP_STATUS.CREATED);
+      return ResponseHandler.success(res, PRODUCT_MESSAGES.RECORD_CREATED, product, HTTP_STATUS.CREATED);
     })
   );
 

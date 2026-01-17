@@ -84,18 +84,21 @@ export function EditProductModal({ isOpen, onClose, productId }: EditProductModa
     }
   }, [product, allSubCategoriesData, allSubSubCategoriesData]);
 
-  const validateField = () => {
-    const result = validateUpdateProduct({
-      subCategoryId,
-      subSubCategoryId,
-      name,
-      description,
-      price,
-      stock,
-      isActive,
-    });
-    setValidationErrors(result.errors);
-  };
+  // Validate on field changes
+  useEffect(() => {
+    if (product && (subCategoryId || subSubCategoryId || name || description || price || stock >= 0)) {
+      const result = validateUpdateProduct({
+        subCategoryId,
+        subSubCategoryId,
+        name,
+        description,
+        price,
+        stock,
+        isActive,
+      });
+      setValidationErrors(result.errors);
+    }
+  }, [product, subCategoryId, subSubCategoryId, name, description, price, stock, isActive]);
 
   const handleSubmit = async () => {
     if (!productId) return;
@@ -208,7 +211,7 @@ export function EditProductModal({ isOpen, onClose, productId }: EditProductModa
                               setSubCategoryId(subCategory.id);
                               setSubCategoryName(subCategory.name || "");
                               setSubCategoryOpen(false);
-                              validateField();
+
                             }}
                           >
                             <Check
@@ -272,7 +275,7 @@ export function EditProductModal({ isOpen, onClose, productId }: EditProductModa
                               setSubSubCategoryId(subSubCategory.id);
                               setSubSubCategoryName(subSubCategory.name || "");
                               setSubSubCategoryOpen(false);
-                              validateField();
+
                             }}
                           >
                             <Check
@@ -305,10 +308,7 @@ export function EditProductModal({ isOpen, onClose, productId }: EditProductModa
               <Input
                 id="name"
                 value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  validateField();
-                }}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="Enter product name"
                 className={nameError ? "border-red-500" : ""}
               />
@@ -328,10 +328,7 @@ export function EditProductModal({ isOpen, onClose, productId }: EditProductModa
               <Textarea
                 id="description"
                 value={description}
-                onChange={(e) => {
-                  setDescription(e.target.value);
-                  validateField();
-                }}
+                onChange={(e) => setDescription(e.target.value)}
                 placeholder="Enter product description"
                 className={descriptionError ? "border-red-500" : ""}
                 rows={3}
@@ -353,10 +350,7 @@ export function EditProductModal({ isOpen, onClose, productId }: EditProductModa
                 id="price"
                 type="text"
                 value={price}
-                onChange={(e) => {
-                  setPrice(e.target.value);
-                  validateField();
-                }}
+                onChange={(e) => setPrice(e.target.value)}
                 placeholder="0.00"
                 className={priceError ? "border-red-500" : ""}
               />
@@ -377,10 +371,7 @@ export function EditProductModal({ isOpen, onClose, productId }: EditProductModa
                 id="stock"
                 type="number"
                 value={stock}
-                onChange={(e) => {
-                  setStock(parseInt(e.target.value) || 0);
-                  validateField();
-                }}
+                onChange={(e) => setStock(parseInt(e.target.value) || 0)}
                 placeholder="0"
                 className={stockError ? "border-red-500" : ""}
               />

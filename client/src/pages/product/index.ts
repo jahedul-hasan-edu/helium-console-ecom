@@ -40,10 +40,11 @@ export const PRODUCT_COLUMNS_LABEL = {
   ACTIVE: "Active",
 };
 
-export const COLUMNS: Column<Product>[] = [
+// Base columns without render functions (render will be added in the .tsx file)
+export const BASE_COLUMNS: Omit<Column<Product>, 'render'>[] = [
   { key: "name", label: PRODUCT_COLUMNS_LABEL.NAME, sortable: true },
-  { key: "subCategoryId", label: PRODUCT_COLUMNS_LABEL.SUB_CATEGORY, sortable: false },
-  { key: "subSubCategoryId", label: PRODUCT_COLUMNS_LABEL.SUB_SUB_CATEGORY, sortable: false },
+  { key: "subCategoryName", label: PRODUCT_COLUMNS_LABEL.SUB_CATEGORY, sortable: false },
+  { key: "subSubCategoryName", label: PRODUCT_COLUMNS_LABEL.SUB_SUB_CATEGORY, sortable: false },
   { key: "price", label: PRODUCT_COLUMNS_LABEL.PRICE, sortable: true },
   { key: "stock", label: PRODUCT_COLUMNS_LABEL.STOCK, sortable: true },
   { key: "isActive", label: PRODUCT_COLUMNS_LABEL.ACTIVE, sortable: false }
