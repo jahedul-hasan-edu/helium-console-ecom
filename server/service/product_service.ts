@@ -43,6 +43,7 @@ export const productService = {
     // Create the product
     const product = await storageProduct.createProduct({ ...data, tenantId, userIp });
     
+    console.log("req.files:", (req as any).files);
     // Handle image uploads if files are provided
     if ((req as any).files && Array.isArray((req as any).files)) {
       const files = (req as any).files as Express.Multer.File[];
@@ -96,9 +97,21 @@ export const productService = {
     }
     
     // Handle image deletions if deletion list is provided
-    if (req.body.imagesToDelete && Array.isArray(req.body.imagesToDelete)) {
-      for (const imageId of req.body.imagesToDelete) {
-        await productImageService.deleteProductImage(imageId, ""); // Get URL from DB or pass it in body
+    if (updates.imagesToDelete && Array.isArray(updates.imagesToDelete)) {
+      const imagesToDelete = updates.imagesToDelete as string[];
+      
+      if (imagesToDelete.length > 0) {
+        // Fetch all images for this product once
+        const allImages = await productImageService.getProductImages(id);
+        
+        // Delete each image
+        for (const imageId of imagesToDelete) {
+          const imageToDelete = allImages.find(img => img.id === imageId);
+          
+          if (imageToDelete && imageToDelete.imageUrl) {
+            await productImageService.deleteProductImage(imageId, imageToDelete.imageUrl);
+          }
+        }
       }
     }
     

@@ -123,8 +123,10 @@ export function useUpdateProduct() {
         successMessage: "Product updated successfully",
       });
     },
-    onSuccess: () => {
+    onSuccess: (_data, { id }) => {
+      // Invalidate both the product list and the specific product detail query
       queryClient.invalidateQueries({ queryKey: [api.products.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.products.get.path(id)] });
     },
   });
 }

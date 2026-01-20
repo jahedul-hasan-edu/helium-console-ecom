@@ -3,6 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { products } from "../../db/schemas/products";
 import { PaginationOptions, PaginationResponse } from "../utils/pagination";
 import { ProductSortField } from "../constants";
+import { ProductImageResponseDTO } from "./ProductImage";
 
 // === BASE SCHEMA ===
 export const productSchema = createInsertSchema(products);
@@ -60,6 +61,16 @@ export const productResponseSchema = z.object({
   createdOn: z.date().nullable(),
   updatedOn: z.date().nullable(),
   userIp: z.string().nullable(),
+  images: z.array(z.object({
+    id: z.string().uuid(),
+    productId: z.string().uuid().nullable(),
+    imageUrl: z.string().nullable(),
+    createdBy: z.string().uuid().nullable(),
+    updatedBy: z.string().uuid().nullable(),
+    createdOn: z.date().nullable(),
+    updatedOn: z.date().nullable(),
+    userIp: z.string().nullable(),
+  })).optional(),
 });
 
 export type ProductResponseDTO = z.infer<typeof productResponseSchema>;

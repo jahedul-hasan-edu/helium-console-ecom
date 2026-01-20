@@ -78,6 +78,12 @@ export function registerProductRoutes(app: Express) {
     upload.array("images", 10), // Allow up to 10 images
     asyncHandler(async (req: Request, res: Response) => {
       const { id } = req.params;
+      
+      // Normalize imagesToDelete to always be an array
+      if (req.body.imagesToDelete && !Array.isArray(req.body.imagesToDelete)) {
+        req.body.imagesToDelete = [req.body.imagesToDelete];
+      }
+      
       const validatedData = updateProductSchema.parse(req.body);
       req.body = validatedData;
       const product = await productService.updateProduct(id, req);

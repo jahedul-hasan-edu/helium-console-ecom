@@ -3,6 +3,7 @@ import { db } from "server/db";
 import { products } from "server/db/schemas/products";
 import { subCategories } from "server/db/schemas/subCategories";
 import { subSubCategories } from "server/db/schemas/subSubCategories";
+import { productImages } from "server/db/schemas/productImages";
 import { CreateProductDTO, GetProductsOptions, GetProductsResponse, UpdateProductDTO, ProductResponseDTO } from "server/shared/dtos/Product";
 import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
 import { PRODUCT_SORT_FIELDS } from "server/shared/constants/feature/productMessages";
@@ -82,8 +83,32 @@ export class StorageProduct implements IStorageProduct {
       .limit(pageSize)
       .offset(offset);
 
+    // Fetch images for each product
+    const itemsWithImages = await Promise.all(
+      results.map(async (result) => {
+        const images = await db
+          .select()
+          .from(productImages)
+          .where(eq(productImages.productId, result.id));
+
+        return {
+          ...result,
+          images: images.map((img) => ({
+            id: img.id,
+            productId: img.productId,
+            imageUrl: img.imageUrl,
+            createdBy: img.createdBy,
+            updatedBy: img.updatedBy,
+            createdOn: img.createdOn,
+            updatedOn: img.updatedOn,
+            userIp: img.userIp,
+          })),
+        };
+      })
+    );
+
     return {
-      items: results,
+      items: itemsWithImages,
       total,
       page,
       pageSize
@@ -94,7 +119,30 @@ export class StorageProduct implements IStorageProduct {
     const [result] = await this.buildProductSelectQuery()
       .where(and(eq(products.id, id), eq(products.tenantId, tenantId)))
       .limit(1);
-    return result;
+    
+    if (!result) {
+      return undefined;
+    }
+
+    // Fetch associated images
+    const images = await db
+      .select()
+      .from(productImages)
+      .where(eq(productImages.productId, id));
+
+    return {
+      ...result,
+      images: images.map((img) => ({
+        id: img.id,
+        productId: img.productId,
+        imageUrl: img.imageUrl,
+        createdBy: img.createdBy,
+        updatedBy: img.updatedBy,
+        createdOn: img.createdOn,
+        updatedOn: img.updatedOn,
+        userIp: img.userIp,
+      })),
+    };
   }
 
   async createProduct(data: CreateProductDTO & { tenantId: string; userIp: string }): Promise<ProductResponseDTO> {
@@ -117,8 +165,26 @@ export class StorageProduct implements IStorageProduct {
     const [result] = await this.buildProductSelectQuery()
       .where(eq(products.id, created.id))
       .limit(1);
+
+    // Fetch associated images (will be empty for new product)
+    const images = await db
+      .select()
+      .from(productImages)
+      .where(eq(productImages.productId, created.id));
       
-    return result!;
+    return {
+      ...result!,
+      images: images.map((img) => ({
+        id: img.id,
+        productId: img.productId,
+        imageUrl: img.imageUrl,
+        createdBy: img.createdBy,
+        updatedBy: img.updatedBy,
+        createdOn: img.createdOn,
+        updatedOn: img.updatedOn,
+        userIp: img.userIp,
+      })),
+    };
   }
 
   async updateProduct(id: string, tenantId: string, updates: UpdateProductDTO & { userIp: string }): Promise<ProductResponseDTO> {
@@ -138,8 +204,26 @@ export class StorageProduct implements IStorageProduct {
     const [result] = await this.buildProductSelectQuery()
       .where(and(eq(products.id, id), eq(products.tenantId, tenantId)))
       .limit(1);
+
+    // Fetch associated images
+    const images = await db
+      .select()
+      .from(productImages)
+      .where(eq(productImages.productId, id));
     
-    return result!;
+    return {
+      ...result!,
+      images: images.map((img) => ({
+        id: img.id,
+        productId: img.productId,
+        imageUrl: img.imageUrl,
+        createdBy: img.createdBy,
+        updatedBy: img.updatedBy,
+        createdOn: img.createdOn,
+        updatedOn: img.updatedOn,
+        userIp: img.userIp,
+      })),
+    };
   }
 
   async deleteProduct(id: string, tenantId: string): Promise<void> {
