@@ -30,13 +30,14 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
+   { name: 'Subscription Plans', href: '/admin/subscription-plans', icon: Package },
+   { name: 'Tenants', href: '/admin/tenants', icon: Calendar },
   { name: 'Users', href: '/admin/users', icon: Users },
-  { name: 'Tenants', href: '/admin/tenants', icon: Calendar },
   { name: 'Main Categories', href: '/admin/main-categories', icon: ShoppingBag },
   { name: 'Categories', href: '/admin/categories', icon: Tag },
   { name: 'Sub Categories', href: '/admin/sub-categories', icon: Tags },
   { name: 'Sub Sub Categories', href: '/admin/sub-sub-categories', icon: Layers },
-  { name: 'Products', href: '/admin/products', icon: Package },
+  { name: 'Products', href: '/admin/products', icon: Package }
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

@@ -13,6 +13,7 @@ import Categories from "./pages/category/Categories";
 import SubCategories from "./pages/subCategory/SubCategories";
 import SubSubCategories from "./pages/subSubCategory/SubSubCategories";
 import Products from "./pages/product/Products";
+import SubscriptionPlans from "./pages/subscriptionPlan/SubscriptionPlans";
 
 function Router() {
   return (
@@ -24,11 +25,14 @@ function Router() {
       <Route path="/admin">
         <Layout><Dashboard /></Layout>
       </Route>
-      <Route path="/admin/users">
-        <Layout><Users /></Layout>
-      </Route>
       <Route path="/admin/tenants">
         <Layout><Tenants /></Layout>
+      </Route>
+      <Route path="/admin/subscription-plans">
+        <Layout><SubscriptionPlans /></Layout>
+      </Route>
+      <Route path="/admin/users">
+        <Layout><Users /></Layout>
       </Route>
       <Route path="/admin/main-categories">
         <Layout><MainCategories /></Layout>

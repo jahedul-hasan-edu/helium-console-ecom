@@ -4,14 +4,14 @@
 You are creating a new CRUD feature following the established pattern from the User feature. This prompt is for features that do NOT store tenant_id in the entity.
 
 ## Feature Details
-**Feature Name**: [Tenant]
+**Feature Name**: [Subscription Plan]
 **SQL Schema**:
 ```sql
-create table tenants (
+create table subscription_plans (
   id uuid primary key default gen_random_uuid(),
-  name text not null,
-  domain text unique,
-  is_active boolean default true,
+  name text,
+  price numeric,
+  duration_days int,
 
   created_by uuid null,
   updated_by uuid null,
@@ -19,6 +19,7 @@ create table tenants (
   updated_on timestamptz null,
   user_ip inet null
 );
+
 
 ```
 
