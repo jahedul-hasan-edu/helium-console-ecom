@@ -4,21 +4,17 @@
 You are creating a new CRUD feature following the established pattern from the User feature. This prompt is for features that store tenant_id in the entity (multi-tenant support).
 
 ## Feature Details
-**Feature Name**: [Product]
+**Feature Name**: [Tenant Subscription]
 **SQL Schema**:
 ```sql
-create table products (
+create table tenant_subscriptions (
   id uuid primary key default gen_random_uuid(),
-  tenant_id uuid references tenants(id),
+  tenant_id uuid references tenants(id), // would be dropdown
+  plan_id uuid references subscription_plans(id), // would be dropdown
 
-  sub_category_id uuid references sub_categories(id), /required
-  sub_sub_category_id uuid references sub_sub_categories(id), /required
-
-  name text, /required
-  description text, /required
-  price numeric(10,2), /required
-  stock int, /required
-  is_active boolean default true, /required
+  start_date date,
+  end_date date,
+  is_active boolean,
 
   created_by uuid null,
   updated_by uuid null,
@@ -350,7 +346,7 @@ The frontend:
 - Should assume all data returned is from current tenant
 
 
-///Special Changes for Product feature
-for sub_category_id and sub sub category id field
-you have to populate a dropdown where you have to load list of sub cateogory and sub sub category these dropdown can serverside user can search/select sub category and sub sub category from the dropdown because my  sub category and sub sub category get api has pagination.
-user can stored/update sub_category_id and sub sub category id
+///Special Changes for Tenant Subscription feature
+for tenant_id and plan_id field
+you have to populate a dropdown where you have to load list of tenants and subscription plan these dropdown can serverside user can search/select tenant and subscription plan from the dropdown because my tenant and subscription plan get api has pagination.
+user can stored/update tenant_id and subscription plan id

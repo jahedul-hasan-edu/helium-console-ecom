@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 const navigation = [
    { name: 'Subscription Plans', href: '/admin/subscription-plans', icon: Package },
    { name: 'Tenants', href: '/admin/tenants', icon: Calendar },
+   { name: 'Tenant Subscriptions', href: '/admin/tenant-subscriptions', icon: Briefcase },
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Main Categories', href: '/admin/main-categories', icon: ShoppingBag },
   { name: 'Categories', href: '/admin/categories', icon: Tag },

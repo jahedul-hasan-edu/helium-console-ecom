@@ -14,6 +14,7 @@ import SubCategories from "./pages/subCategory/SubCategories";
 import SubSubCategories from "./pages/subSubCategory/SubSubCategories";
 import Products from "./pages/product/Products";
 import SubscriptionPlans from "./pages/subscriptionPlan/SubscriptionPlans";
+import TenantSubscriptions from "./pages/tenantSubscription/TenantSubscriptions";
 
 function Router() {
   return (
@@ -30,6 +31,9 @@ function Router() {
       </Route>
       <Route path="/admin/subscription-plans">
         <Layout><SubscriptionPlans /></Layout>
+      </Route>
+      <Route path="/admin/tenant-subscriptions">
+        <Layout><TenantSubscriptions /></Layout>
       </Route>
       <Route path="/admin/users">
         <Layout><Users /></Layout>
