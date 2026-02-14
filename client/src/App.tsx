@@ -15,6 +15,7 @@ import SubSubCategories from "./pages/subSubCategory/SubSubCategories";
 import Products from "./pages/product/Products";
 import SubscriptionPlans from "./pages/subscriptionPlan/SubscriptionPlans";
 import TenantSubscriptions from "./pages/tenantSubscription/TenantSubscriptions";
+import Faqs from "./pages/faq/Faqs";
 
 function Router() {
   return (
@@ -52,6 +53,9 @@ function Router() {
       </Route>
       <Route path="/admin/products">
         <Layout><Products /></Layout>
+      </Route>
+      <Route path="/admin/faqs">
+        <Layout><Faqs /></Layout>
       </Route>
 
       <Route component={NotFound} />

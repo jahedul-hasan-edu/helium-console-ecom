@@ -12,7 +12,8 @@ import {
   LogOut,
   Tags,
   Layers,
-  Package
+  Package,
+  HelpCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,7 +39,8 @@ const navigation = [
   { name: 'Categories', href: '/admin/categories', icon: Tag },
   { name: 'Sub Categories', href: '/admin/sub-categories', icon: Tags },
   { name: 'Sub Sub Categories', href: '/admin/sub-sub-categories', icon: Layers },
-  { name: 'Products', href: '/admin/products', icon: Package }
+  { name: 'Products', href: '/admin/products', icon: Package },
+  { name: 'FAQs', href: '/admin/faqs', icon: HelpCircle }
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

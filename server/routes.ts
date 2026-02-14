@@ -9,6 +9,7 @@ import { registerSubSubCategoryRoutes } from "./api/controllers/subSubCategories
 import { registerProductRoutes } from "./api/controllers/products";
 import { registerSubscriptionPlanRoutes } from "./api/controllers/subscriptionPlans";
 import { registerTenantSubscriptionRoutes } from "./api/controllers/tenantSubscriptions";
+import { registerFaqRoutes } from "./api/controllers/faqs";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -24,6 +25,7 @@ export async function registerRoutes(
   await registerProductRoutes(app);
   await registerSubscriptionPlanRoutes(app);
   await registerTenantSubscriptionRoutes(app);
+  await registerFaqRoutes(app);
 
   return httpServer;
 }

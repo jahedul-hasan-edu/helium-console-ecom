@@ -10,3 +10,4 @@ export * from "./subSubCategoryMessages";
 export * from "./productMessages";
 export * from "./subscriptionPlanMessages";
 export * from "./tenantSubscriptionMessages";
+export * from "./faqMessages";

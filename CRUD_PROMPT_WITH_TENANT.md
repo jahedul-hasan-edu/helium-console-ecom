@@ -4,16 +4,14 @@
 You are creating a new CRUD feature following the established pattern from the User feature. This prompt is for features that store tenant_id in the entity (multi-tenant support).
 
 ## Feature Details
-**Feature Name**: [Tenant Subscription]
+**Feature Name**: [Frequently Ask Question]
 **SQL Schema**:
 ```sql
-create table tenant_subscriptions (
+create table faqs (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid references tenants(id), // would be dropdown
-  plan_id uuid references subscription_plans(id), // would be dropdown
-
-  start_date date,
-  end_date date,
+  title text,
+  answer text,
   is_active boolean,
 
   created_by uuid null,
@@ -176,12 +174,15 @@ Define constants:
 **Path**: `client/src/hooks/use-[FeatureName].ts`
 Create React Query hooks:
 - `use[FeaturePlural](params)`: Query list with pagination/sort/filter
-  - Server automatically filters by current tenant
+  - Supports `tenantId` parameter for filtering by tenant
+  - Server filters tenant_id based on parameter
 - `use[FeatureName](id)`: Query single record
   - Server verifies tenant ownership
 - `useCreate[FeatureName]()`: Mutation for create
-  - Server automatically assigns tenant_id
+  - Accepts `tenantId` in request body
+  - Server validates tenant_id ownership
 - `useUpdate[FeatureName]()`: Mutation for update
+  - Accepts optional `tenantId` in request body
   - Server verifies tenant ownership
 - `useDelete[FeatureName]()`: Mutation for delete
   - Server verifies tenant ownership
@@ -189,36 +190,46 @@ Create React Query hooks:
 All hooks should use the API route constants and handle pagination params.
 
 ### 3. Form Validation
-**Path**: `client/src/lib/formValidator.ts` (extend existing)
+**Path**: `client/src/pages/[featureName]/formValidator.ts`
 Add methods:
 - `validateCreate[FeatureName](data)`: Validate create form
+  - **Required**: Validate tenantId is selected
+  - Check non-null DB fields
+  - Text fields: Min/max length validation
+  - Email fields: Email format validation
+  - Phone fields: Phone format validation
+  - Numeric fields: Min/max validation
 - `validateUpdate[FeatureName](data)`: Validate update form
+  - **Optional**: TenantId can optionally be changed
+  - Validate tenantId if provided
+  - Validate other fields as required
 
-Validation rules:
-- Required fields: Check non-null DB fields
-- Text fields: Min/max length validation
-- Email fields: Email format validation
-- Phone fields: Phone format validation
-- Numeric fields: Min/max validation
-- Custom validations as needed
-
-**Note**: Do NOT include tenant_id in form validation - it's handled server-side
+**Note**: TenantId is now required in create forms and optional in update forms
 
 ### 4. Modal Components
 Create three modal components in `client/src/pages/[featureName]/`:
 
 **Create[FeatureName]Modal.tsx**:
+- **New**: Tenant dropdown field at the top (required)
+  - Load tenants from `useTenants()` hook
+  - Display format: `<SelectItem value={tenant.id}>{tenant.name}</SelectItem>`
+  - Placeholder: "Select a tenant"
+  - Show validation error if not selected
 - Form with all required + optional fields
-- **Exclude**: tenant_id, id, timestamps, created_by
+- **Exclude**: id, timestamps, created_by
 - Form validation using FormValidator
 - Error display with icons
 - Submit button (disabled during loading/validation)
 - Loading state
 
 **Edit[FeatureName]Modal.tsx**:
+- **New**: Tenant dropdown field (optional editable)
+  - Allow user to change tenant if needed
+  - Load tenants from `useTenants()` hook
+  - Pre-populate with current FAQ's tenant
 - Load existing record data
 - Update form with visible fields only
-- Read-only system fields (id, timestamps, created_by, tenant_id)
+- Read-only system fields (id, timestamps, created_by)
 - Form validation
 - Error display
 - Submit button
@@ -233,18 +244,35 @@ Create three modal components in `client/src/pages/[featureName]/`:
 **Path**: `client/src/pages/[featureName]/[FeaturePlural].tsx`
 
 Structure:
-- State: searchTerm, currentPage, pageSize, sortBy, sortOrder, modal states, selectedId
-- Use hooks: use[FeaturePlural], useGet[FeatureName], useMutation hooks
-- Handle functions: Search, Edit, Delete, Create, Update, DeleteConfirm, Sort
+- State: searchTerm, **selectedTenantId**, currentPage, pageSize, sortBy, sortOrder, modal states, selectedId
+- Use hooks: use[FeaturePlural], useGet[FeatureName], useMutation hooks, **useTenants**
+- Handle functions: **handleTenantChange**, Search, Edit, Delete, Create, Update, DeleteConfirm, Sort
 - Columns definition from constants (excluding tenant_id)
 - renderActions using ActionButtons component
 - Return layout with:
   - Header (title, subtitle, Add button)
+  - **Tenant filter dropdown (above search)**
+    - Load tenants from `useTenants()` hook
+    - Default option: "All Tenants" (empty string)
+    - Display: `<SelectItem value={tenant.id}>{tenant.name}</SelectItem>`
+    - onChange: Reset to page 1
   - Search input
   - PaginatedDataTable component
   - Modal components
 
-**Note**: All API calls automatically include tenant filtering server-side
+**Parameters passed to useFaqs**:
+```typescript
+const { data: faqsData } = useFaqs({
+  page: currentPage,
+  pageSize,
+  search: searchTerm,
+  sortBy,
+  sortOrder,
+  tenantId: selectedTenantId, // NEW: Pass selected tenant filter
+});
+```
+
+**Note**: All API calls include tenant filtering
 
 ### 6. UI Patterns to Follow
 
@@ -290,16 +318,22 @@ Use reusable `ActionButtons` component with Edit/Delete buttons
 
 Backend:
 - [ ] tenant_id included in schema
-- [ ] All queries filter by tenant_id
+- [ ] All queries filter by tenant_id (support filtering parameter)
 - [ ] get/update/delete verify tenant ownership
-- [ ] Service passes tenantId from request
+- [ ] Service passes tenantId from request and filters
 - [ ] Controller extracts tenantId from auth
 - [ ] No data leakage between tenants
+- [ ] **NEW**: Implement uniqueness validation (title + tenant_id combination)
+- [ ] **NEW**: Check for duplicates before create/update operations
 
 Frontend:
 - [ ] tenant_id NOT displayed in columns
-- [ ] tenant_id NOT in form fields
-- [ ] API hooks handle tenant filtering (server-side)
+- [ ] **NEW**: Tenant dropdown in create modal (required)
+- [ ] **NEW**: Tenant dropdown in edit modal (optional editable)
+- [ ] **NEW**: Tenant filter dropdown on main page (above table)
+- [ ] Tenant dropdown populated from `useTenants()` hook
+- [ ] Tenant ID included in create/update request body
+- [ ] API hooks handle tenant filtering parameter
 - [ ] No manual tenant_id manipulation in UI
 
 ## Checklist Before Implementation
@@ -307,46 +341,91 @@ Frontend:
 Backend:
 - [ ] SQL schema analyzed with tenant_id field
 - [ ] Field nullability determined
-- [ ] DTOs exclude tenant_id from create/update input
+- [ ] DTOs include tenantId in create/update DTO
 - [ ] Repository has tenant_id filters on all queries
+- [ ] **NEW**: Repository has `checkDuplicate[Feature]()` method for uniqueness validation
 - [ ] Service extracts tenantId from request
+- [ ] Service validates duplicates before create/update
 - [ ] Controller extracts tenantId from auth
 - [ ] All get/update/delete verify tenant ownership
-- [ ] Static messages in constants/feature
+- [ ] Static messages in constants/feature (include duplicate message)
 - [ ] Routes registered in routes.ts
 - [ ] Proper use of ResponseHandler
 
 Frontend:
-- [ ] Constants file with all static strings
+- [ ] Constants file with tenant form labels and filter placeholder
 - [ ] Type definitions for sort/filter
-- [ ] React Query hooks for API
-- [ ] Form validation rules (no tenant_id field)
-- [ ] Modal components (Create, Edit, Delete)
+- [ ] React Query hooks for API (support tenantId param)
+- [ ] Form validation rules (validate tenantId required in create, optional in update)
+- [ ] **NEW**: Modal components include tenant dropdown
+- [ ] Modal Create: Tenant dropdown (required field)
+- [ ] Modal Edit: Tenant dropdown (optional editable field)
 - [ ] Main feature component with all handlers
+- [ ] **NEW**: Main page has tenant filter dropdown above table
+- [ ] **NEW**: handleTenantChange function implemented
+- [ ] **NEW**: selectedTenantId state added
+- [ ] **NEW**: useTenants hook used in components
 - [ ] ActionButtons component used
 - [ ] PaginatedDataTable used
 - [ ] Sorting 3-click cycle implemented
 - [ ] No magic strings in components
-- [ ] tenant_id NOT exposed in UI
-- [ ] tenant_id NOT in forms
-- [ ] Each feature has separate form validator
+- [ ] Tenant filter dropdown populated from database
+- [ ] Tenant dropdowns in forms populated from database
+- [ ] Each feature has separate form validator (with tenantId validation)
 
 ## Important: Tenant Data Isolation
 
 The server automatically:
-- Filters all queries by current user's tenant_id
-- Assigns tenant_id on record creation
+- Filters all queries by tenant_id parameter
+- Assigns tenant_id from request body on record creation
 - Verifies tenant_id on read/update/delete
 - Prevents cross-tenant data access
+- **NEW**: Validates uniqueness of records per tenant (e.g., same title cannot exist twice for same tenant)
 
 The frontend:
-- Should never manually manage tenant_id
-- Should trust server-side tenant filtering
-- Should not expose tenant_id in UI
-- Should assume all data returned is from current tenant
+- Provides tenant dropdown selector on main page for filtering
+- Provides tenant dropdown in create/edit forms
+- Includes tenantId in all create/update requests
+- Trusts server-side tenant filtering and validation
+- Does not expose tenant_id in table columns
+- Allows filtering data by selected tenant
 
+## Tenant Dropdown Implementation Details
 
-///Special Changes for Tenant Subscription feature
-for tenant_id and plan_id field
-you have to populate a dropdown where you have to load list of tenants and subscription plan these dropdown can serverside user can search/select tenant and subscription plan from the dropdown because my tenant and subscription plan get api has pagination.
-user can stored/update tenant_id and subscription plan id
+### Backend Changes
+1. **Service Layer**:
+   - Update `getFaqs()` to accept optional `tenantId` query parameter for filtering
+   - Add `checkDuplicate()` method to repository for uniqueness validation
+   - Validate duplicates in create/update operations
+   - Return appropriate error message if duplicate found
+
+2. **Repository Layer**:
+   - Implement `checkDuplicate(title, tenantId, excludeId?)` method
+   - Filter queries by tenantId when provided
+   - Support case-insensitive matching for uniqueness check
+
+### Frontend Changes
+1. **Main Page (List Component)**:
+   - Add tenant dropdown filter above the table
+   - Load tenants using `useTenants()` hook
+   - Default option "All Tenants" (empty string value)
+   - Filter FAQ list when tenant is selected
+   - Reset pagination to page 1 when filter changes
+
+2. **Create Modal**:
+   - Add required tenant dropdown field
+   - Load tenants using `useTenants()` hook
+   - Show validation error if not selected
+   - Include tenantId in create request
+
+3. **Edit Modal**:
+   - Add optional tenant dropdown field
+   - Load tenants using `useTenants()` hook
+   - Pre-populate with current FAQ's tenant
+   - Allow changing tenant if needed
+   - Include tenantId in update request (if changed)
+
+4. **Form Validator**:
+   - Require tenantId in create form validation
+   - Optionally validate tenantId in update form validation
+   - Show appropriate error messages
