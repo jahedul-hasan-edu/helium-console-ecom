@@ -11,6 +11,7 @@ export const products = pgTable("products", {
   name: text("name"),
   description: text("description"),
   price: numeric("price", { precision: 10, scale: 2 }),
+  unit: text("unit"),
   stock: integer("stock"),
   isActive: boolean("is_active").default(true),
   createdBy: uuid("created_by"),

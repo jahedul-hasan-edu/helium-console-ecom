@@ -8,6 +8,7 @@ export const orderItems = pgTable("order_items", {
   orderId: uuid("order_id"),
   productId: uuid("product_id"),
   quantity: integer("quantity"),
+  unit: text("unit"),
   price: numeric("price", { precision: 10, scale: 2 }),
   createdBy: uuid("created_by"),
   updatedBy: uuid("updated_by"),
