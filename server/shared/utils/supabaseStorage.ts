@@ -47,7 +47,8 @@ export interface UploadImageResult {
 export async function uploadImageToSupabase(
   file: Buffer,
   productId: string,
-  imageId: string
+  imageId: string,
+  file_base_path: string = "product_images"
 ): Promise<UploadImageResult> {
   if (!supabase) {
     throw new Error("Supabase client is not initialized");
@@ -56,7 +57,7 @@ export async function uploadImageToSupabase(
   // Get file extension from file type or default to jpg
   const fileExtension = getFileExtension(file);
   const fileName = `${productId}_${imageId}.${fileExtension}`;
-  const filePath = `product_images/${fileName}`;
+  const filePath = `${file_base_path}/${fileName}`;
 
   try {
     // Upload file to Supabase
@@ -117,14 +118,15 @@ export async function uploadImageToSupabase(
 /**
  * Delete an image from Supabase bucket
  * @param fileName - File name to delete (format: product_id_image_id.extension)
+ * @param file_base_path - Base path for the file in the bucket
  */
-export async function deleteImageFromSupabase(fileName: string): Promise<void> {
+export async function deleteImageFromSupabase(fileName: string, file_base_path: string = "product_images"): Promise<void> {
   if (!supabase) {
     console.warn("Supabase client is not initialized - cannot delete image");
     return;
   }
 
-  const filePath = `product_images/${fileName}`;
+  const filePath = `${file_base_path}/${fileName}`;
 
   const { error } = await supabase.storage
     .from(BUCKET_NAME)

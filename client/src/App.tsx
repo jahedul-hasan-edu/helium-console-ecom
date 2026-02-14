@@ -16,6 +16,7 @@ import Products from "./pages/product/Products";
 import SubscriptionPlans from "./pages/subscriptionPlan/SubscriptionPlans";
 import TenantSubscriptions from "./pages/tenantSubscription/TenantSubscriptions";
 import Faqs from "./pages/faq/Faqs";
+import HomeSettings from "./pages/homeSetting/HomeSettings";
 
 function Router() {
   return (
@@ -56,6 +57,9 @@ function Router() {
       </Route>
       <Route path="/admin/faqs">
         <Layout><Faqs /></Layout>
+      </Route>
+      <Route path="/admin/home-settings">
+        <Layout><HomeSettings /></Layout>
       </Route>
 
       <Route component={NotFound} />

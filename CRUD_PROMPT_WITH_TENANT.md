@@ -4,15 +4,27 @@
 You are creating a new CRUD feature following the established pattern from the User feature. This prompt is for features that store tenant_id in the entity (multi-tenant support).
 
 ## Feature Details
-**Feature Name**: [Frequently Ask Question]
+**Feature Name**: [Home Setting]
 **SQL Schema**:
 ```sql
-create table faqs (
+create table home_settings (
   id uuid primary key default gen_random_uuid(),
-  tenant_id uuid references tenants(id), // would be dropdown
+  tenant_id uuid references tenants(id), 
   title text,
-  answer text,
+  sub_title text,
   is_active boolean,
+
+  created_by uuid null,
+  updated_by uuid null,
+  created_on timestamptz null,
+  updated_on timestamptz null,
+  user_ip inet null
+);
+
+create table home_setting_images (
+  id uuid primary key default gen_random_uuid(),
+  home_setting_id uuid references home_settings(id), 
+  image_url text,
 
   created_by uuid null,
   updated_by uuid null,
@@ -226,7 +238,7 @@ Create three modal components in `client/src/pages/[featureName]/`:
 - **New**: Tenant dropdown field (optional editable)
   - Allow user to change tenant if needed
   - Load tenants from `useTenants()` hook
-  - Pre-populate with current FAQ's tenant
+  - Pre-populate with current feature tenant
 - Load existing record data
 - Update form with visible fields only
 - Read-only system fields (id, timestamps, created_by)
@@ -260,9 +272,9 @@ Structure:
   - PaginatedDataTable component
   - Modal components
 
-**Parameters passed to useFaqs**:
+**Parameters passed to use[Feature]s**:
 ```typescript
-const { data: faqsData } = useFaqs({
+const { data: [feature]Data } = use[Feature]s({
   page: currentPage,
   pageSize,
   search: searchTerm,
@@ -394,7 +406,7 @@ The frontend:
 
 ### Backend Changes
 1. **Service Layer**:
-   - Update `getFaqs()` to accept optional `tenantId` query parameter for filtering
+   - Update `get[Feature]s()` to accept optional `tenantId` query parameter for filtering
    - Add `checkDuplicate()` method to repository for uniqueness validation
    - Validate duplicates in create/update operations
    - Return appropriate error message if duplicate found
@@ -409,7 +421,7 @@ The frontend:
    - Add tenant dropdown filter above the table
    - Load tenants using `useTenants()` hook
    - Default option "All Tenants" (empty string value)
-   - Filter FAQ list when tenant is selected
+   - Filter list when tenant is selected
    - Reset pagination to page 1 when filter changes
 
 2. **Create Modal**:
@@ -421,7 +433,7 @@ The frontend:
 3. **Edit Modal**:
    - Add optional tenant dropdown field
    - Load tenants using `useTenants()` hook
-   - Pre-populate with current FAQ's tenant
+   - Pre-populate with current feature tenant
    - Allow changing tenant if needed
    - Include tenantId in update request (if changed)
 
@@ -429,3 +441,8 @@ The frontend:
    - Require tenantId in create form validation
    - Optionally validate tenantId in update form validation
    - Show appropriate error messages
+
+Important more Changes
+1. User can able to create/edit upload multiple images like product.
+2. Once home settings delete associated home settings image also be deleted accordingly.
+3. Upload image functionality exactly same as the product feature how it's create/update images

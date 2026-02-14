@@ -13,7 +13,8 @@ import {
   Tags,
   Layers,
   Package,
-  HelpCircle
+  HelpCircle,
+  Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,7 +41,8 @@ const navigation = [
   { name: 'Sub Categories', href: '/admin/sub-categories', icon: Tags },
   { name: 'Sub Sub Categories', href: '/admin/sub-sub-categories', icon: Layers },
   { name: 'Products', href: '/admin/products', icon: Package },
-  { name: 'FAQs', href: '/admin/faqs', icon: HelpCircle }
+  { name: 'FAQs', href: '/admin/faqs', icon: HelpCircle },
+  { name: 'Home Settings', href: '/admin/home-settings', icon: Settings }
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
