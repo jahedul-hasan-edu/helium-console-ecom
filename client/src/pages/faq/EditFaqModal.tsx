@@ -40,6 +40,7 @@ export function EditFaqModal({
   isLoading,
   faq,
 }: EditFaqModalProps) {
+
   const [formData, setFormData] = useState({
     title: "",
     answer: "",
@@ -58,7 +59,7 @@ export function EditFaqModal({
         title: faq.title || "",
         answer: faq.answer || "",
         tenantId: faq.tenantId || "",
-        isActive: faq.isActive ?? true,
+        isActive: faq.isActive === true,
       });
       setErrors([]);
     }
@@ -119,16 +120,6 @@ export function EditFaqModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* ID (Read-only) */}
-          <div className="space-y-2">
-            <Label className="text-xs text-gray-500">FAQ ID</Label>
-            <Input
-              value={faq?.id || ""}
-              disabled
-              className="bg-gray-100 text-gray-600"
-            />
-          </div>
-
           {/* Tenant Dropdown */}
           <div className="space-y-2">
             <Label htmlFor="tenantId">{FAQ_FORM.TENANT_LABEL}</Label>
@@ -197,25 +188,19 @@ export function EditFaqModal({
           <div className="flex items-center gap-2">
             <Checkbox
               id="isActive"
-              name="isActive"
               checked={formData.isActive}
-              onCheckedChange={(checked) => handleCheckboxChange("isActive", !!checked)}
+              onCheckedChange={(checked) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  isActive: Boolean(checked),
+                }));
+              }}
               disabled={isLoading}
             />
             <Label htmlFor="isActive" className="cursor-pointer text-sm">
               {FAQ_FORM.ACTIVE_LABEL}
             </Label>
           </div>
-
-          {/* Metadata (Read-only) */}
-          {faq?.createdOn && (
-            <div className="text-xs text-gray-500 pt-2 border-t">
-              <p>Created: {new Date(faq.createdOn).toLocaleDateString()}</p>
-              {faq?.updatedOn && (
-                <p>Updated: {new Date(faq.updatedOn).toLocaleDateString()}</p>
-              )}
-            </div>
-          )}
 
           {/* Submit Button */}
           <div className="flex justify-end gap-2 pt-4">

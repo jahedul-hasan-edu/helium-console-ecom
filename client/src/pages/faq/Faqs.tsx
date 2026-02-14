@@ -11,7 +11,7 @@ import {
 import { Search, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useUpdateFaq, useFaqs, useCreateFaq, useDeleteFaq, useGetFaq } from "@/hooks/use-Faq";
+import { useUpdateFaq, useFaqs, useCreateFaq, useDeleteFaq } from "@/hooks/use-Faq";
 import { useTenants } from "@/hooks/use-Tenant";
 import { CreateFaqModal } from "@/pages/faq/CreateFaqModal";
 import { EditFaqModal } from "@/pages/faq/EditFaqModal";
@@ -39,7 +39,7 @@ export default function Faqs() {
     pageSize: 1000,
   });
 
-  const { data: faqsData, isLoading, refetch } = useFaqs({
+  const { data: faqsData, isLoading } = useFaqs({
     page: currentPage,
     pageSize,
     search: searchTerm,
@@ -48,7 +48,10 @@ export default function Faqs() {
     tenantId: selectedTenantId,
   } as any);
 
-  const { data: selectedFaq } = useGetFaq(selectedFaqId);
+  const selectedFaq = useMemo(
+    () => faqsData?.items?.find((faq) => faq.id === selectedFaqId),
+    [faqsData?.items, selectedFaqId]
+  );
   const createFaqMutation = useCreateFaq();
   const updateFaqMutation = useUpdateFaq();
   const deleteFaqMutation = useDeleteFaq();
@@ -78,7 +81,6 @@ export default function Faqs() {
     try {
       await createFaqMutation.mutateAsync(data);
       setShowCreateModal(false);
-      refetch();
     } catch (error) {
       console.error(ERROR_MESSAGES.CREATE_FAQ_FAILED, error);
     }
@@ -90,7 +92,6 @@ export default function Faqs() {
       await updateFaqMutation.mutateAsync({ id: selectedFaqId, ...data });
       setShowEditModal(false);
       setSelectedFaqId(null);
-      refetch();
     } catch (error) {
       console.error(ERROR_MESSAGES.UPDATE_FAQ_FAILED, error);
     }
@@ -102,7 +103,6 @@ export default function Faqs() {
       await deleteFaqMutation.mutateAsync(selectedFaqId);
       setShowDeleteModal(false);
       setSelectedFaqId(null);
-      refetch();
     } catch (error) {
       console.error(ERROR_MESSAGES.DELETE_FAQ_FAILED, error);
     }
