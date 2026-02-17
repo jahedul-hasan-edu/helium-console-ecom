@@ -4,27 +4,15 @@
 You are creating a new CRUD feature following the established pattern from the User feature. This prompt is for features that store tenant_id in the entity (multi-tenant support).
 
 ## Feature Details
-**Feature Name**: [Home Setting]
+**Feature Name**: [Popup Ad]
 **SQL Schema**:
 ```sql
-create table home_settings (
+create table popup_ad (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid references tenants(id), 
   title text,
-  sub_title text,
-  is_active boolean,
-
-  created_by uuid null,
-  updated_by uuid null,
-  created_on timestamptz null,
-  updated_on timestamptz null,
-  user_ip inet null
-);
-
-create table home_setting_images (
-  id uuid primary key default gen_random_uuid(),
-  home_setting_id uuid references home_settings(id), 
   image_url text,
+  is_active boolean,
 
   created_by uuid null,
   updated_by uuid null,

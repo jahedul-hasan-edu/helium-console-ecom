@@ -17,6 +17,7 @@ import SubscriptionPlans from "./pages/subscriptionPlan/SubscriptionPlans";
 import TenantSubscriptions from "./pages/tenantSubscription/TenantSubscriptions";
 import Faqs from "./pages/faq/Faqs";
 import HomeSettings from "./pages/homeSetting/HomeSettings";
+import PopupAds from "./pages/popupAd/PopupAds";
 
 function Router() {
   return (
@@ -60,6 +61,9 @@ function Router() {
       </Route>
       <Route path="/admin/home-settings">
         <Layout><HomeSettings /></Layout>
+      </Route>
+      <Route path="/admin/popup-ads">
+        <Layout><PopupAds /></Layout>
       </Route>
 
       <Route component={NotFound} />

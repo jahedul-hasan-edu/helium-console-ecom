@@ -17,6 +17,7 @@ import * as deliverySlotSchemas from "./db/schemas/deliverySlots";
 import * as paymentSchemas from "./db/schemas/payments";
 import * as subscriptionPlanSchemas from "./db/schemas/subscriptionPlans";
 import * as tenantSubscriptionSchemas from "./db/schemas/tenantSubscriptions";
+import * as popupAdSchemas from "./db/schemas/popupAds";
 
 const schema = {
   ...tenantSchemas,
@@ -36,6 +37,7 @@ const schema = {
   ...paymentSchemas,
   ...subscriptionPlanSchemas,
   ...tenantSubscriptionSchemas,
+  ...popupAdSchemas,
 };
 
 const { Pool } = pg;

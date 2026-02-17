@@ -11,6 +11,7 @@ import { registerSubscriptionPlanRoutes } from "./api/controllers/subscriptionPl
 import { registerTenantSubscriptionRoutes } from "./api/controllers/tenantSubscriptions";
 import { registerFaqRoutes } from "./api/controllers/faqs";
 import { registerHomeSettingRoutes } from "./api/controllers/homeSettings";
+import { registerPopupAdRoutes } from "./api/controllers/popupAds";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -28,6 +29,7 @@ export async function registerRoutes(
   await registerTenantSubscriptionRoutes(app);
   await registerFaqRoutes(app);
   await registerHomeSettingRoutes(app);
+  await registerPopupAdRoutes(app);
 
   return httpServer;
 }

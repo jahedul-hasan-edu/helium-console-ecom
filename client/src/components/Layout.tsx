@@ -42,7 +42,8 @@ const navigation = [
   { name: 'Sub Sub Categories', href: '/admin/sub-sub-categories', icon: Layers },
   { name: 'Products', href: '/admin/products', icon: Package },
   { name: 'FAQs', href: '/admin/faqs', icon: HelpCircle },
-  { name: 'Home Settings', href: '/admin/home-settings', icon: Settings }
+  { name: 'Home Settings', href: '/admin/home-settings', icon: Settings },
+  { name: 'Popup Ads', href: '/admin/popup-ads', icon: Bell }
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

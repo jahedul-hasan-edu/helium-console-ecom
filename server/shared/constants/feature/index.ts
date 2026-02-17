@@ -10,4 +10,6 @@ export * from "./subSubCategoryMessages";
 export * from "./productMessages";
 export * from "./subscriptionPlanMessages";
 export * from "./tenantSubscriptionMessages";
-export * from "./faqMessages";export * from "./homeSettingMessages";
+export * from "./faqMessages";
+export * from "./homeSettingMessages";
+export * from "./popupAdMessages";
