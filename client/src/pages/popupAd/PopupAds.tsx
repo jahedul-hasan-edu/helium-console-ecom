@@ -249,23 +249,23 @@ export default function PopupAds() {
           </div>
 
           {/* Table */}
-          <PaginatedDataTable
-          columns={[...columns] as any}
-          data={(popupAdsData?.items as PopupAd[]) || undefined}
-          isLoading={isLoading}
+          <PaginatedDataTable<PopupAd>
+           columns={columns}
+          data={popupAdsData?.items}
           currentPage={currentPage}
-          pageSize={pageSize}
-          totalItems={popupAdsData?.total || 0}
           totalPages={totalPages}
+          pageSize={pageSize}
           onPageChange={setCurrentPage}
-          onPageSizeChange={(newSize) => {
-            setPageSize(newSize);
+          onPageSizeChange={(size) => {
+            setPageSize(size);
             setCurrentPage(1);
-          }}
+          } }
           onSort={handleSort}
           sortBy={sortBy}
           sortOrder={sortOrder}
-          renderActions={renderActions as any}
+          isLoading={isLoading}
+          emptyMessage={POPUP_AD_PAGE.emptyMessage} totalItems={popupAdsData?.total || 0}
+          renderActions={renderActions}
           />
       </div>
 

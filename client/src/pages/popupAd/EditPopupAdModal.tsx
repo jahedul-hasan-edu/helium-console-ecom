@@ -58,7 +58,7 @@ export function EditPopupAdModal({
       setFormData({
         title: popupAd.title || "",
         tenantId: popupAd.tenantId || "",
-        isActive: popupAd.isActive ?? true,
+        isActive: popupAd.isActive === true,
       });
       setImagePreview(popupAd.imageUrl || "");
       setSelectedImage(null);
@@ -267,11 +267,13 @@ export function EditPopupAdModal({
           <div className="flex items-center space-x-2">
             <Checkbox
               id="isActive"
-              name="isActive"
               checked={formData.isActive}
-              onCheckedChange={(checked) =>
-                setFormData((prev) => ({ ...prev, isActive: checked as boolean }))
-              }
+              onCheckedChange={(checked) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  isActive: Boolean(checked),
+                }));
+              }}
               disabled={isLoading}
             />
             <Label

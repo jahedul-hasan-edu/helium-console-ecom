@@ -2,18 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiService } from "@/lib/apiService";
 import { api } from "@/routes/popupAdRoute";
 import { QueryParams, ListResponse } from "@/lib/interface";
-
-export interface PopupAdData {
-  id?: string;
-  tenantId: string;
-  title: string;
-  imageUrl?: string;
-  isActive?: boolean;
-  createdOn?: string;
-  createdBy?: string;
-  updatedBy?: string;
-  updatedOn?: string;
-}
+import { PopupAd } from "@/models/PopupAd";
 
 // Get list with pagination, sorting, and search
 export function usePopupAds(params?: QueryParams) {
@@ -31,7 +20,7 @@ export function usePopupAds(params?: QueryParams) {
   return useQuery({
     queryKey: [api.popupAds.list.path, params],
     queryFn: () =>
-      apiService.get<ListResponse<PopupAdData>>(url, {
+      apiService.get<ListResponse<PopupAd>>(url, {
         showSuccessToast: false,
       }),
   });
@@ -42,7 +31,7 @@ export function usePopupAd(id: string | null) {
   return useQuery({
     queryKey: [api.popupAds.get(id || "").path],
     queryFn: () =>
-      apiService.get<PopupAdData>(api.popupAds.get(id!).path, {
+      apiService.get<PopupAd>(api.popupAds.get(id!).path, {
         showSuccessToast: false,
       }),
     enabled: !!id,
@@ -64,7 +53,7 @@ export function useCreatePopupAd() {
         formData.append("image", data.image);
       }
 
-      return apiService.postFormData<PopupAdData>(api.popupAds.create.path, formData, {
+      return apiService.postFormData<PopupAd>(api.popupAds.create.path, formData, {
         showSuccessToast: false,
       });
     },
@@ -90,7 +79,7 @@ export function useUpdatePopupAd() {
         formData.append("image", data.image);
       }
 
-      return apiService.patchFormData<PopupAdData>(api.popupAds.update(id).path, formData, {
+      return apiService.patchFormData<PopupAd>(api.popupAds.update(id).path, formData, {
         showSuccessToast: false,
       });
     },
