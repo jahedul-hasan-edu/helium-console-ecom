@@ -17,6 +17,7 @@ import SubscriptionPlans from "./pages/subscriptionPlan/SubscriptionPlans";
 import TenantSubscriptions from "./pages/tenantSubscription/TenantSubscriptions";
 import Faqs from "./pages/faq/Faqs";
 import HomeSettings from "./pages/homeSetting/HomeSettings";
+import Organizations from "./pages/organization/Organizations";
 import PopupAds from "./pages/popupAd/PopupAds";
 
 function Router() {
@@ -31,6 +32,9 @@ function Router() {
       </Route>
       <Route path="/admin/tenants">
         <Layout><Tenants /></Layout>
+      </Route>
+      <Route path="/admin/organizations">
+        <Layout><Organizations /></Layout>
       </Route>
       <Route path="/admin/subscription-plans">
         <Layout><SubscriptionPlans /></Layout>

@@ -3,6 +3,7 @@
  */
 export * from "./userMessages";
 export * from "./tenantMessages";
+export * from "./organizationMessages";
 export * from "./mainCategoryMessages";
 export * from "./categoryMessages";
 export * from "./subCategoryMessages";

@@ -4,13 +4,24 @@
 You are creating a new CRUD feature following the established pattern from the User feature. This prompt is for features that store tenant_id in the entity (multi-tenant support).
 
 ## Feature Details
-**Feature Name**: [Popup Ad]
+**Feature Name**: [Organization]
 **SQL Schema**:
 ```sql
-create table popup_ad (
+create table organization (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid references tenants(id), 
   title text,
+  logo_title text,
+  phone text,
+  email text,
+  address text,
+  social_fb_url text,
+  social_in_url text,
+  social_x_url text,
+  social_utube_url text,
+  license text,
+  privacy_policy text,
+  return_policy text,
   image_url text,
   is_active boolean,
 
@@ -430,7 +441,6 @@ The frontend:
    - Optionally validate tenantId in update form validation
    - Show appropriate error messages
 
-Important more Changes
-1. User can able to create/edit upload multiple images like product.
-2. Once home settings delete associated home settings image also be deleted accordingly.
-3. Upload image functionality exactly same as the product feature how it's create/update images
+Important more Changes 
+1. User can able to create/edit/view upload image like product. user can upload only single image.
+2. keep privacy policy, return policy, address are rich/dynamic field. user can put html/text content there.
