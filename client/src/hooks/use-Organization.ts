@@ -24,7 +24,7 @@ function buildOrganizationsUrl(basePath: string, params?: GetOrganizationsParams
 }
 
 function appendFormData(formData: FormData, data: CreateOrganizationRequest | UpdateOrganizationRequest) {
-  const stringFields: Array<keyof (CreateOrganizationRequest & UpdateOrganizationRequest)> = [
+  const stringFields: Array<keyof CreateOrganizationRequest> = [
     "tenantId",
     "title",
     "logoTitle",
@@ -55,7 +55,7 @@ function appendFormData(formData: FormData, data: CreateOrganizationRequest | Up
     formData.append("image", data.image);
   }
 
-  if (data.removeImage) {
+  if ("removeImage" in data && data.removeImage) {
     formData.append("removeImage", "true");
   }
 }

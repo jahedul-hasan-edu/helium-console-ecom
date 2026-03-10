@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
+import Orders from "@/pages/order/Orders";
 import Users from "@/pages/user/Users";
 import NotFound from "./pages/not-found";
 import Tenants from "./pages/tenant/Tenants";
@@ -35,6 +36,9 @@ function Router() {
       </Route>
       <Route path="/admin/organizations">
         <Layout><Organizations /></Layout>
+      </Route>
+      <Route path="/admin/orders">
+        <Layout><Orders /></Layout>
       </Route>
       <Route path="/admin/subscription-plans">
         <Layout><SubscriptionPlans /></Layout>

@@ -2,6 +2,7 @@ import type { Express } from "express";
 import type { Server } from "http";
 import { registerUserRoutes } from "./api/controllers/users";
 import { registerTenantRoutes } from "./api/controllers/tenants";
+import { registerOrderRoutes } from "./api/controllers/orders";
 import { registerOrganizationRoutes } from "./api/controllers/organizations";
 import { registerMainCategoryRoutes } from "./api/controllers/mainCategories";
 import { registerCategoryRoutes } from "./api/controllers/categories";
@@ -21,6 +22,7 @@ export async function registerRoutes(
   // Register feature routes
   await registerUserRoutes(app);
   await registerTenantRoutes(app);
+  await registerOrderRoutes(app);
   await registerOrganizationRoutes(app);
   await registerMainCategoryRoutes(app);
   await registerCategoryRoutes(app);

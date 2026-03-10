@@ -1,4 +1,4 @@
-import { eq, desc, sql, asc, and, leftJoin } from "drizzle-orm";
+import { eq, desc, sql, asc, and } from "drizzle-orm";
 import { db } from "server/db";
 import { subCategories } from "server/db/schemas/subCategories";
 import { categories } from "server/db/schemas/categories";
