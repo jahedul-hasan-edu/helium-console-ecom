@@ -27,6 +27,8 @@ export const STATIC_PAGE_DEFINITIONS: StaticPageDefinition[] = [
   { title: "Popup Ads", slug: "popup-ads", icon: "Megaphone", routePath: "/admin/popup-ads", sortOrder: 15, parentId: null },
 ];
 
+export const SUPER_ADMIN_ONLY_PAGE_SLUGS = ["subscription-plans", "tenants", "tenant-subscriptions"] as const;
+
 export const ADMIN_ROUTE_PAGE_MAP: Record<string, string> = {
   categories: "categories",
   faqs: "faqs",

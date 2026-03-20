@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useAuth } from "@/contexts/AuthContext";
+import { AUTH_ROUTES, AUTH_STORAGE_KEYS, TWO_FACTOR_METHOD } from "@/lib/auth";
 
 export default function TwoFactorVerify() {
   const [, navigate] = useLocation();
@@ -13,7 +14,7 @@ export default function TwoFactorVerify() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const pendingData = useMemo(() => {
-    const rawValue = sessionStorage.getItem("pending2fa");
+    const rawValue = sessionStorage.getItem(AUTH_STORAGE_KEYS.PENDING_TWO_FACTOR);
     if (!rawValue) {
       return null;
     }
@@ -26,7 +27,7 @@ export default function TwoFactorVerify() {
   }, []);
 
   if (!pendingData) {
-    navigate("/login", { replace: true });
+    navigate(AUTH_ROUTES.LOGIN, { replace: true });
     return null;
   }
 
@@ -39,8 +40,10 @@ export default function TwoFactorVerify() {
     setIsSubmitting(true);
     try {
       await verifyTwoFactor(pendingData.tempToken, code);
-      sessionStorage.removeItem("pending2fa");
-      navigate("/admin", { replace: true });
+      sessionStorage.removeItem(AUTH_STORAGE_KEYS.PENDING_TWO_FACTOR);
+      navigate(AUTH_ROUTES.ADMIN_HOME, { replace: true });
+    } catch {
+      // The API layer already surfaces auth failures via toast notifications.
     } finally {
       setIsSubmitting(false);
     }
@@ -55,9 +58,10 @@ export default function TwoFactorVerify() {
               <KeyRound className="w-6 h-6" />
             </div>
             <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.28em] text-primary/70">Helium Easy Ecom</p>
               <CardTitle>Two-Factor Verification</CardTitle>
               <CardDescription>
-                Enter the 6-digit code from your {pendingData.method === "email" ? "email" : "authenticator app"}.
+                Enter the 6-digit code from your {pendingData.method === TWO_FACTOR_METHOD.EMAIL ? "email" : "authenticator app"}.
               </CardDescription>
             </div>
           </CardHeader>

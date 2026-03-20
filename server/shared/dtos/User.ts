@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { users } from "../../db/schemas/users";
+import { RoleName } from "server/shared/constants/enums";
 import { PaginationOptions, PaginationResponse } from "../utils/pagination";
 import { USER_SORT_FIELDS, UserSortField } from "../constants/feature/userMessages";
 
@@ -15,7 +16,7 @@ export const createUserSchema = z.object({
   mobile: z.string().min(1, "Mobile is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   tenantId: z.string().uuid().optional(),
-  roleName: z.enum(["super_admin", "tenant_admin", "user"]).optional(),
+  roleName: z.nativeEnum(RoleName).optional(),
   isActive: z.boolean().optional(),
 }).strict();
 
@@ -27,7 +28,7 @@ export const updateUserSchema = z.object({
   lastName: z.string().min(1, "Last name is required").optional(),
   mobile: z.string().min(1, "Mobile is required").optional(),
   tenantId: z.string().uuid().optional(),
-  roleName: z.enum(["super_admin", "tenant_admin", "user"]).optional(),
+  roleName: z.nativeEnum(RoleName).optional(),
   isActive: z.boolean().optional(),
 }).strict();
 

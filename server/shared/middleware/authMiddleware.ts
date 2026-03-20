@@ -3,7 +3,7 @@ import { and, eq, isNull, or } from "drizzle-orm";
 import { db } from "server/db";
 import { sessions } from "server/db/schemas/sessions";
 import { users } from "server/db/schemas/users";
-import { HTTP_STATUS } from "server/shared/constants";
+import { AUTH_MESSAGES, HTTP_STATUS, RoleName } from "server/shared/constants";
 import { ResponseHandler } from "server/shared/utils/ResponseHandler";
 import { JwtUtil } from "server/shared/utils/jwtUtil";
 import type { AuthenticatedRequest } from "server/shared/utils/requestContext";
@@ -24,7 +24,7 @@ export async function authMiddleware(
   const token = getBearerToken(req.headers.authorization);
 
   if (!token) {
-    ResponseHandler.error(res, "Authentication required", HTTP_STATUS.UNAUTHORIZED);
+    ResponseHandler.error(res, AUTH_MESSAGES.TOKEN_REQUIRED, HTTP_STATUS.UNAUTHORIZED);
     return;
   }
 
@@ -45,7 +45,7 @@ export async function authMiddleware(
       .limit(1);
 
     if (!session) {
-      ResponseHandler.error(res, "Session is no longer active", HTTP_STATUS.UNAUTHORIZED);
+      ResponseHandler.error(res, AUTH_MESSAGES.SESSION_INACTIVE, HTTP_STATUS.UNAUTHORIZED);
       return;
     }
 
@@ -56,14 +56,14 @@ export async function authMiddleware(
       .limit(1);
 
     if (!user) {
-      ResponseHandler.error(res, "User is inactive", HTTP_STATUS.UNAUTHORIZED);
+      ResponseHandler.error(res, AUTH_MESSAGES.USER_INACTIVE, HTTP_STATUS.UNAUTHORIZED);
       return;
     }
 
-    if (decoded.roleName !== "super_admin" && decoded.subscriptionExpiresAt) {
+    if (decoded.roleName !== RoleName.SUPER_ADMIN && decoded.subscriptionExpiresAt) {
       const expiresAt = new Date(decoded.subscriptionExpiresAt);
       if (Number.isFinite(expiresAt.getTime()) && expiresAt.getTime() < Date.now()) {
-        ResponseHandler.error(res, "Subscription expired", HTTP_STATUS.FORBIDDEN);
+        ResponseHandler.error(res, AUTH_MESSAGES.LOGIN_SUBSCRIPTION_EXPIRED, HTTP_STATUS.FORBIDDEN);
         return;
       }
     }
@@ -72,7 +72,7 @@ export async function authMiddleware(
     req.userId = decoded.userId;
     req.tenantId = decoded.tenantId;
 
-    if (decoded.roleName !== "super_admin") {
+    if (decoded.roleName !== RoleName.SUPER_ADMIN) {
       req.query.tenantId = decoded.tenantId;
       if (req.body && typeof req.body === "object") {
         req.body.tenantId = decoded.tenantId;
@@ -89,6 +89,6 @@ export async function authMiddleware(
 
     next();
   } catch (error) {
-    ResponseHandler.error(res, "Invalid or expired access token", HTTP_STATUS.UNAUTHORIZED);
+    ResponseHandler.error(res, AUTH_MESSAGES.TOKEN_INVALID, HTTP_STATUS.UNAUTHORIZED);
   }
 }

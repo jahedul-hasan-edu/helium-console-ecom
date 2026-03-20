@@ -1,5 +1,6 @@
 import { storageUser } from "./repos/user_repo";
 import { CreateUserDTO, GetUsersOptions, GetUsersResponse, UpdateUserDTO, UserResponseDTO } from "server/shared/dtos/User";
+import { RoleName } from "server/shared/constants/enums";
 import { PasswordUtil } from "server/shared/utils/passwordUtil";
 import { Request } from "express";
 import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
@@ -71,7 +72,7 @@ export class UserService {
       throw new Error("Tenant context is required to create a user");
     }
 
-    const requestedRoleName = requesterRole === "tenant_admin" ? "user" : user.roleName || "user";
+    const requestedRoleName = requesterRole === RoleName.TENANT_ADMIN ? RoleName.USER : user.roleName || RoleName.USER;
 
     const hashedPassword = PasswordUtil.hashPassword(user.password);
 
@@ -116,7 +117,7 @@ export class UserService {
       await authService.ensureUserRoleAssignment(
         id,
         tenantId,
-        authenticatedRequest.user?.roleName === "tenant_admin" ? "user" : updates.roleName,
+        authenticatedRequest.user?.roleName === RoleName.TENANT_ADMIN ? RoleName.USER : updates.roleName,
         authenticatedRequest.user?.userId,
         userIp
       );

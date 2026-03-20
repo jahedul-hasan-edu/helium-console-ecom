@@ -7,9 +7,16 @@ import {
   type ReactNode,
 } from "react";
 import { useLocation } from "wouter";
+import { AUTH_ROUTES, AUTH_STORAGE_KEYS, CLIENT_ROLE_NAME } from "@/lib/auth";
 import { queryClient } from "@/lib/queryClient";
 import { apiService } from "@/lib/apiService";
-import type { AuthSuccessResponse, AuthUser, LoginResponse } from "@/models/Auth";
+import type {
+  AuthSuccessResponse,
+  AuthUser,
+  LoginResponse,
+  RegisterSuperAdminRequest,
+  RegisterTenantAdminRequest,
+} from "@/models/Auth";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -19,19 +26,17 @@ interface AuthContextValue {
   isSuperAdmin: boolean;
   isTenantAdmin: boolean;
   login: (email: string, password: string) => Promise<LoginResponse>;
+  register: (payload: RegisterSuperAdminRequest | RegisterTenantAdminRequest) => Promise<AuthSuccessResponse>;
   verifyTwoFactor: (tempToken: string, code: string) => Promise<AuthSuccessResponse>;
   logout: () => Promise<void>;
   setSelectedTenantId: (tenantId: string | null) => void;
   hasPermission: () => boolean;
 }
 
-const AUTH_USER_STORAGE_KEY = "authUser";
-const SELECTED_TENANT_STORAGE_KEY = "selectedTenantId";
-
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function readStoredUser(): AuthUser | null {
-  const rawValue = localStorage.getItem(AUTH_USER_STORAGE_KEY);
+  const rawValue = localStorage.getItem(AUTH_STORAGE_KEYS.AUTH_USER);
   if (!rawValue) {
     return null;
   }
@@ -39,14 +44,14 @@ function readStoredUser(): AuthUser | null {
   try {
     return JSON.parse(rawValue) as AuthUser;
   } catch {
-    localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+    localStorage.removeItem(AUTH_STORAGE_KEYS.AUTH_USER);
     return null;
   }
 }
 
 function clearStoredAuth(): void {
-  localStorage.removeItem(AUTH_USER_STORAGE_KEY);
-  localStorage.removeItem(SELECTED_TENANT_STORAGE_KEY);
+  localStorage.removeItem(AUTH_STORAGE_KEYS.AUTH_USER);
+  localStorage.removeItem(AUTH_STORAGE_KEYS.SELECTED_TENANT_ID);
   apiService.clearTokens();
 }
 
@@ -55,19 +60,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => readStoredUser());
   const [isInitializing, setIsInitializing] = useState(true);
   const [selectedTenantId, setSelectedTenantIdState] = useState<string | null>(() => {
-    return localStorage.getItem(SELECTED_TENANT_STORAGE_KEY);
+    return localStorage.getItem(AUTH_STORAGE_KEYS.SELECTED_TENANT_ID);
   });
 
-  const isSuperAdmin = user?.roleName === "super_admin";
-  const isTenantAdmin = user?.roleName === "tenant_admin";
+  const isSuperAdmin = user?.roleName === CLIENT_ROLE_NAME.SUPER_ADMIN;
+  const isTenantAdmin = user?.roleName === CLIENT_ROLE_NAME.TENANT_ADMIN;
 
   const applySession = (payload: AuthSuccessResponse) => {
     apiService.setTokens(payload.accessToken, payload.refreshToken);
-    localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(payload.user));
+    localStorage.setItem(AUTH_STORAGE_KEYS.AUTH_USER, JSON.stringify(payload.user));
     setUser(payload.user);
 
-    if (payload.user.roleName !== "super_admin") {
-      localStorage.removeItem(SELECTED_TENANT_STORAGE_KEY);
+    if (payload.user.roleName !== CLIENT_ROLE_NAME.SUPER_ADMIN) {
+      localStorage.removeItem(AUTH_STORAGE_KEYS.SELECTED_TENANT_ID);
       setSelectedTenantIdState(null);
     }
   };
@@ -77,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSelectedTenantIdState(null);
     queryClient.clear();
-    navigate("/login", { replace: true });
+    navigate(AUTH_ROUTES.LOGIN, { replace: true });
   };
 
   useEffect(() => {
@@ -95,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           showErrorToast: false,
           showSuccessToast: false,
         });
-        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(currentUser));
+        localStorage.setItem(AUTH_STORAGE_KEYS.AUTH_USER, JSON.stringify(currentUser));
         setUser(currentUser);
       } catch {
         clearStoredAuth();
@@ -129,6 +134,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return response;
   };
 
+  const register = async (
+    payload: RegisterSuperAdminRequest | RegisterTenantAdminRequest
+  ): Promise<AuthSuccessResponse> => {
+    const response = await apiService.post<AuthSuccessResponse>("/api/auth/register", payload, {
+      showErrorToast: true,
+      showSuccessToast: false,
+    });
+    applySession(response);
+    return response;
+  };
+
   const verifyTwoFactor = async (tempToken: string, code: string): Promise<AuthSuccessResponse> => {
     const response = await apiService.post<AuthSuccessResponse>(
       "/api/auth/verify-2fa",
@@ -158,9 +174,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (tenantId) {
-      localStorage.setItem(SELECTED_TENANT_STORAGE_KEY, tenantId);
+      localStorage.setItem(AUTH_STORAGE_KEYS.SELECTED_TENANT_ID, tenantId);
     } else {
-      localStorage.removeItem(SELECTED_TENANT_STORAGE_KEY);
+      localStorage.removeItem(AUTH_STORAGE_KEYS.SELECTED_TENANT_ID);
     }
     setSelectedTenantIdState(tenantId);
     queryClient.invalidateQueries();
@@ -175,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isSuperAdmin,
       isTenantAdmin,
       login,
+      register,
       verifyTwoFactor,
       logout,
       setSelectedTenantId,

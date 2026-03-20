@@ -1,4 +1,5 @@
 import { toast } from "@/hooks/use-toast";
+import { AUTH_STORAGE_KEYS, CLIENT_ROLE_NAME } from "@/lib/auth";
 
 export interface ApiResponseData<T = any> {
   success: boolean;
@@ -21,7 +22,7 @@ class ApiService {
   private baseUrl = "";
 
   private getStoredAuthUser(): { roleName?: string } | null {
-    const rawValue = localStorage.getItem("authUser");
+    const rawValue = localStorage.getItem(AUTH_STORAGE_KEYS.AUTH_USER);
     if (!rawValue) {
       return null;
     }
@@ -39,8 +40,8 @@ class ApiService {
     }
 
     const authUser = this.getStoredAuthUser();
-    const selectedTenantId = localStorage.getItem("selectedTenantId");
-    if (authUser?.roleName !== "super_admin" || !selectedTenantId) {
+    const selectedTenantId = localStorage.getItem(AUTH_STORAGE_KEYS.SELECTED_TENANT_ID);
+    if (authUser?.roleName !== CLIENT_ROLE_NAME.SUPER_ADMIN || !selectedTenantId) {
       return { url, body };
     }
 
@@ -80,7 +81,7 @@ class ApiService {
     };
 
     // Add bearer token if available
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
@@ -89,7 +90,7 @@ class ApiService {
   }
 
   private async tryRefreshToken(): Promise<boolean> {
-    const refreshToken = localStorage.getItem("refreshToken");
+    const refreshToken = localStorage.getItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
     if (!refreshToken) {
       return false;
     }
@@ -133,8 +134,8 @@ class ApiService {
     const scopedRequest = this.appendTenantScope(url, body, isFormData);
     const headers = isFormData
       ? {
-          ...(localStorage.getItem("authToken")
-            ? { Authorization: `Bearer ${localStorage.getItem("authToken")}` }
+          ...(localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN)
+            ? { Authorization: `Bearer ${localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN)}` }
             : {}),
           ...(options.headers || {}),
         }
@@ -272,25 +273,25 @@ class ApiService {
   }
 
   setAuthToken(token: string): void {
-    localStorage.setItem("authToken", token);
+    localStorage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, token);
   }
 
   clearAuthToken(): void {
-    localStorage.removeItem("authToken");
+    localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
   }
 
   setTokens(accessToken: string, refreshToken: string): void {
-    localStorage.setItem("authToken", accessToken);
-    localStorage.setItem("refreshToken", refreshToken);
+    localStorage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+    localStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
   }
 
   clearTokens(): void {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("refreshToken");
+    localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
   }
 
   getAccessToken(): string | null {
-    return localStorage.getItem("authToken");
+    return localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
   }
 
   // Category API methods

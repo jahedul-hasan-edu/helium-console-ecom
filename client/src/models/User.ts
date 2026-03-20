@@ -1,3 +1,5 @@
+import type { ClientRoleName } from "@/lib/auth";
+
 export interface User {
   id: string;
   tenantId: string;
@@ -21,7 +23,7 @@ export interface CreateUserRequest {
   email: string;
   mobile: string;
   password: string;
-  roleName?: "super_admin" | "tenant_admin" | "user";
+  roleName?: ClientRoleName;
   tenantId?: string;
 }
 
@@ -29,7 +31,7 @@ export interface UpdateUserRequest {
   firstName?: string;
   lastName?: string;
   mobile?: string;
-  roleName?: "super_admin" | "tenant_admin" | "user";
+  roleName?: ClientRoleName;
   isActive?: boolean;
 }
 

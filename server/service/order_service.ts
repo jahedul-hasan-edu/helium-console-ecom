@@ -1,5 +1,6 @@
 import { Request } from "express";
 import { HTTP_STATUS } from "server/shared/constants/httpStatus";
+import { RoleName } from "server/shared/constants/enums";
 import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
 import { ORDER_MESSAGES, ORDER_SORT_FIELDS, type OrderSortField } from "server/shared/constants/feature/orderMessages";
 import { CreateOrderDTO, GetOrdersOptions, UpdateOrderDTO } from "server/shared/dtos/Order";
@@ -15,7 +16,7 @@ function createHttpError(message: string, statusCode: number): HttpError {
 }
 
 function getCurrentTenantId(req: Request): string | undefined {
-  if ((req as AuthenticatedRequest).user?.roleName !== "super_admin") {
+  if ((req as AuthenticatedRequest).user?.roleName !== RoleName.SUPER_ADMIN) {
     return (req as AuthenticatedRequest).user?.tenantId;
   }
   const tenantId = req.query.tenantId;

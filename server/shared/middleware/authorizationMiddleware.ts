@@ -5,7 +5,7 @@ import { pages } from "server/db/schemas/pages";
 import { tenantPages } from "server/db/schemas/tenantPages";
 import { tenantRolePagePermissions } from "server/db/schemas/tenantRolePagePermissions";
 import { tenantRolePages } from "server/db/schemas/tenantRolePages";
-import { HTTP_STATUS } from "server/shared/constants";
+import { AUTH_MESSAGES, HTTP_STATUS, RoleName } from "server/shared/constants";
 import { ResponseHandler } from "server/shared/utils/ResponseHandler";
 import {
   ADMIN_ROUTE_PAGE_MAP,
@@ -35,11 +35,11 @@ export async function authorizationMiddleware(
   next: NextFunction
 ): Promise<void> {
   if (!req.user) {
-    ResponseHandler.error(res, "Authentication required", HTTP_STATUS.UNAUTHORIZED);
+    ResponseHandler.error(res, AUTH_MESSAGES.TOKEN_REQUIRED, HTTP_STATUS.UNAUTHORIZED);
     return;
   }
 
-  if (req.user.roleName === "super_admin") {
+  if (req.user.roleName === RoleName.SUPER_ADMIN) {
     next();
     return;
   }
@@ -61,7 +61,7 @@ export async function authorizationMiddleware(
     return;
   }
 
-  if (req.user.roleName === "tenant_admin") {
+  if (req.user.roleName === RoleName.TENANT_ADMIN) {
     const [tenantPage] = await db
       .select({ id: tenantPages.id })
       .from(tenantPages)
@@ -75,7 +75,7 @@ export async function authorizationMiddleware(
       .limit(1);
 
     if (!tenantPage) {
-      ResponseHandler.error(res, "Access denied", HTTP_STATUS.FORBIDDEN);
+      ResponseHandler.error(res, AUTH_MESSAGES.ACCESS_DENIED, HTTP_STATUS.FORBIDDEN);
       return;
     }
 
@@ -113,7 +113,7 @@ export async function authorizationMiddleware(
     .limit(1);
 
   if (!permissionRecord || !permissionRecord[permissionKey]) {
-    ResponseHandler.error(res, "Access denied", HTTP_STATUS.FORBIDDEN);
+    ResponseHandler.error(res, AUTH_MESSAGES.ACCESS_DENIED, HTTP_STATUS.FORBIDDEN);
     return;
   }
 

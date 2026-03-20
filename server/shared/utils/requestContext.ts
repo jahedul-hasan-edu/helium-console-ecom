@@ -1,4 +1,5 @@
 import type { Request } from "express";
+import { RoleName } from "server/shared/constants/enums";
 
 export type AuthenticatedRequest = Request & {
   user?: {
@@ -50,7 +51,7 @@ export function extractTenantId(req: AuthenticatedRequest): string | undefined {
     return typeof req.query.tenantId === "string" ? req.query.tenantId : undefined;
   }
 
-  if (req.user.roleName === "super_admin") {
+  if (req.user.roleName === RoleName.SUPER_ADMIN) {
     if (typeof req.query.tenantId === "string" && req.query.tenantId.trim()) {
       return req.query.tenantId;
     }

@@ -1,11 +1,12 @@
 import { FormEvent, useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
+import { AUTH_ROUTES, AUTH_STORAGE_KEYS } from "@/lib/auth";
 
 export default function Login() {
   const [, navigate] = useLocation();
@@ -21,12 +22,14 @@ export default function Login() {
     try {
       const response = await login(email, password);
       if ("requires2FA" in response) {
-        sessionStorage.setItem("pending2fa", JSON.stringify(response));
-        navigate("/2fa-verify");
+        sessionStorage.setItem(AUTH_STORAGE_KEYS.PENDING_TWO_FACTOR, JSON.stringify(response));
+        navigate(AUTH_ROUTES.TWO_FACTOR_VERIFY);
         return;
       }
 
-      navigate("/admin", { replace: true });
+      navigate(AUTH_ROUTES.ADMIN_HOME, { replace: true });
+    } catch {
+      // The API layer already surfaces auth failures via toast notifications.
     } finally {
       setIsSubmitting(false);
     }
@@ -41,6 +44,7 @@ export default function Login() {
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.28em] text-primary/70">Helium Easy Ecom</p>
               <CardTitle>Sign In</CardTitle>
               <CardDescription>
                 Access your tenant workspace with your assigned account.
@@ -77,6 +81,12 @@ export default function Login() {
               <Button className="w-full" disabled={isSubmitting} type="submit">
                 {isSubmitting ? "Signing in..." : "Sign In"}
               </Button>
+              <p className="text-center text-sm text-muted-foreground">
+                Don&apos;t have an account?{" "}
+                <Link href={AUTH_ROUTES.REGISTER}>
+                  <a className="font-medium text-primary underline-offset-4 hover:underline">Register</a>
+                </Link>
+              </p>
             </form>
           </CardContent>
         </Card>

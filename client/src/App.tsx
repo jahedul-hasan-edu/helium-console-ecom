@@ -22,7 +22,9 @@ import HomeSettings from "./pages/homeSetting/HomeSettings";
 import Organizations from "./pages/organization/Organizations";
 import PopupAds from "./pages/popupAd/PopupAds";
 import Login from "@/pages/auth/Login";
+import Register from "@/pages/auth/Register";
 import TwoFactorVerify from "@/pages/auth/TwoFactorVerify";
+import { AUTH_ROUTES } from "@/lib/auth";
 
 function RootRedirect() {
   const { isAuthenticated, isInitializing } = useAuth();
@@ -31,15 +33,16 @@ function RootRedirect() {
     return null;
   }
 
-  return <Redirect to={isAuthenticated ? "/admin" : "/login"} />;
+  return <Redirect to={isAuthenticated ? AUTH_ROUTES.ADMIN_HOME : AUTH_ROUTES.LOGIN} />;
 }
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={RootRedirect} />
-      <Route path="/login" component={Login} />
-      <Route path="/2fa-verify" component={TwoFactorVerify} />
+      <Route path={AUTH_ROUTES.LOGIN} component={Login} />
+      <Route path={AUTH_ROUTES.REGISTER} component={Register} />
+      <Route path={AUTH_ROUTES.TWO_FACTOR_VERIFY} component={TwoFactorVerify} />
 
       <Route path="/admin">
         <AuthShell><Dashboard /></AuthShell>

@@ -15,3 +15,4 @@ export * from "./tenantSubscriptionMessages";
 export * from "./faqMessages";
 export * from "./homeSettingMessages";
 export * from "./popupAdMessages";
+export * from "./authMessages";

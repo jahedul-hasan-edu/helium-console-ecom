@@ -5,6 +5,7 @@ import { pages } from "server/db/schemas/pages";
 import { tenantPages } from "server/db/schemas/tenantPages";
 import { tenantRolePagePermissions } from "server/db/schemas/tenantRolePagePermissions";
 import { tenantRolePages } from "server/db/schemas/tenantRolePages";
+import { RoleName } from "server/shared/constants";
 import { authService } from "./auth_service";
 import { STATIC_PAGE_DEFINITIONS } from "server/shared/utils/authPages";
 import type { AuthenticatedRequest } from "server/shared/utils/requestContext";
@@ -79,7 +80,7 @@ export const navigationService = {
       return [];
     }
 
-    if (req.user.roleName === "super_admin") {
+    if (req.user.roleName === RoleName.SUPER_ADMIN) {
       const pageRows = await db
         .select()
         .from(pages)
@@ -110,7 +111,7 @@ export const navigationService = {
       );
     }
 
-    if (req.user.roleName === "tenant_admin") {
+    if (req.user.roleName === RoleName.TENANT_ADMIN) {
       const rows = await db
         .select({
           id: pages.id,
