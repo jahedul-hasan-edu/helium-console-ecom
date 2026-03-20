@@ -4,6 +4,7 @@ import { asyncHandler } from "../../shared/utils/asyncHandler";
 import { ResponseHandler } from "server/shared/utils/ResponseHandler";
 import { api } from "../routes/faqRoute";
 import { HTTP_STATUS, FAQ_MESSAGES, FAQ_SORT_FIELDS } from "server/shared/constants";
+import { extractTenantId, type AuthenticatedRequest } from "server/shared/utils/requestContext";
 
 export async function registerFaqRoutes(app: Express): Promise<void> {
   // GET - List all FAQs with pagination, sorting, and search
@@ -38,7 +39,7 @@ export async function registerFaqRoutes(app: Express): Promise<void> {
     api.faqs.get.path,
     asyncHandler(async (req, res) => {
       const { id } = req.params;
-      const tenantId = (req as any).tenantId || "0027d5b0-9a89-48f0-95fd-2228294ff053";
+      const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
       
       const faq = await faqService.getFaq(id, tenantId);
 
@@ -71,7 +72,7 @@ export async function registerFaqRoutes(app: Express): Promise<void> {
     api.faqs.delete.path,
     asyncHandler(async (req, res) => {
       const { id } = req.params;
-      const tenantId = (req as any).tenantId || "0027d5b0-9a89-48f0-95fd-2228294ff053";
+      const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
       
       await faqService.deleteFaq(id, tenantId);
 

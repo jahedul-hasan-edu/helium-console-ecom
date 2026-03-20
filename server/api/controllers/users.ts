@@ -32,7 +32,7 @@ export async function registerUserRoutes(app: Express): Promise<void> {
         return ResponseHandler.error(res, "Email is required", HTTP_STATUS.BAD_REQUEST);
       }
 
-      const existingUser = await userService.checkEmailExists(email);
+      const existingUser = await userService.checkEmailExists(email, req);
       
       ResponseHandler.success(
         res,
@@ -54,7 +54,7 @@ export async function registerUserRoutes(app: Express): Promise<void> {
   app.get(
     api.users.get.path,
     asyncHandler(async (req, res) => {
-      const user = await userService.getUser(req.params.id);
+      const user = await userService.getUser(req.params.id, req);
       if (!user) {
         return ResponseHandler.error(res, USER_MESSAGES.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
       }
@@ -73,7 +73,7 @@ export async function registerUserRoutes(app: Express): Promise<void> {
   app.delete(
     api.users.delete.path,
     asyncHandler(async (req, res) => {
-      await userService.deleteUser(req.params.id);
+      await userService.deleteUser(req.params.id, req);
       ResponseHandler.success(res, USER_MESSAGES.USER_DELETED_SUCCESSFULLY, null, HTTP_STATUS.OK);
     })
   );

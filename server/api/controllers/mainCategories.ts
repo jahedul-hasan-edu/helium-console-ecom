@@ -4,8 +4,7 @@ import { asyncHandler } from "../../shared/utils/asyncHandler";
 import { ResponseHandler } from "server/shared/utils/ResponseHandler";
 import { api } from "../routes/mainCategoryRoute";
 import { HTTP_STATUS, MAIN_CATEGORY_MESSAGES } from "server/shared/constants";
-
-const DEFAULT_TENANT_ID = "0027d5b0-9a89-48f0-95fd-2228294ff053";
+import { extractTenantId, type AuthenticatedRequest } from "server/shared/utils/requestContext";
 
 export async function registerMainCategoryRoutes(app: Express): Promise<void> {
   app.get(
@@ -29,7 +28,10 @@ export async function registerMainCategoryRoutes(app: Express): Promise<void> {
     "/api/admin/main-categories/check-slug",
     asyncHandler(async (req, res) => {
       const slug = req.query.slug as string;
-      const tenantId = DEFAULT_TENANT_ID; // TODO: Extract from authenticated user
+      const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+      if (!tenantId) {
+        return ResponseHandler.error(res, "Tenant context is required", HTTP_STATUS.BAD_REQUEST);
+      }
       
       if (!slug) {
         return ResponseHandler.error(res, "Slug is required", HTTP_STATUS.BAD_REQUEST);
@@ -57,7 +59,10 @@ export async function registerMainCategoryRoutes(app: Express): Promise<void> {
   app.get(
     api.mainCategories.get.path,
     asyncHandler(async (req, res) => {
-      const tenantId = DEFAULT_TENANT_ID; // TODO: Extract from authenticated user
+      const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+      if (!tenantId) {
+        return ResponseHandler.error(res, "Tenant context is required", HTTP_STATUS.BAD_REQUEST);
+      }
       const mainCategory = await mainCategoryService.getMainCategory(req.params.id, tenantId);
       if (!mainCategory) {
         return ResponseHandler.error(res, MAIN_CATEGORY_MESSAGES.MAIN_CATEGORY_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
@@ -77,7 +82,10 @@ export async function registerMainCategoryRoutes(app: Express): Promise<void> {
   app.delete(
     api.mainCategories.delete.path,
     asyncHandler(async (req, res) => {
-      const tenantId = DEFAULT_TENANT_ID; // TODO: Extract from authenticated user
+      const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+      if (!tenantId) {
+        return ResponseHandler.error(res, "Tenant context is required", HTTP_STATUS.BAD_REQUEST);
+      }
       await mainCategoryService.deleteMainCategory(req.params.id, tenantId);
       ResponseHandler.success(res, MAIN_CATEGORY_MESSAGES.MAIN_CATEGORY_DELETED_SUCCESSFULLY, null, HTTP_STATUS.OK);
     })

@@ -3,8 +3,7 @@ import { CreateSubCategoryDTO, GetSubCategoriesOptions, GetSubCategoriesResponse
 import { Request } from "express";
 import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
 import { SUB_CATEGORY_SORT_FIELDS } from "server/shared/constants/feature/subCategoryMessages";
-
-const DEFAULT_TENANT_ID = "0027d5b0-9a89-48f0-95fd-2228294ff053";
+import { extractTenantId, getUserIp, type AuthenticatedRequest } from "server/shared/utils/requestContext";
 
 /**
  * SubCategory Service
@@ -23,7 +22,10 @@ export class SubCategoryService {
     const sortOrder = (req.query.sortOrder as "asc" | "desc") || PAGINATION_DEFAULTS.SORT_ORDER;
     
     // Extract tenant ID from request (adjust based on auth implementation)
-    const tenantId = DEFAULT_TENANT_ID; // TODO: Extract from authenticated user
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
     
     const options: GetSubCategoriesOptions = {
       page,
@@ -55,10 +57,11 @@ export class SubCategoryService {
    */
   async createSubCategory(req: Request): Promise<SubCategoryResponseDTO> {
     const subCategoryData: CreateSubCategoryDTO = req.body;
-    const userIp = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
-    
-    // Extract tenant ID from request (adjust based on auth implementation)
-    const tenantId = DEFAULT_TENANT_ID; // TODO: Extract from authenticated user
+    const userIp = getUserIp(req);
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
 
     return await storageSubCategory.createSubCategory({
       ...subCategoryData,
@@ -71,10 +74,11 @@ export class SubCategoryService {
    * Update a sub-category
    */
   async updateSubCategory(id: string, updates: UpdateSubCategoryDTO, req: Request): Promise<SubCategoryResponseDTO> {
-    const userIp = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
-    
-    // Extract tenant ID from request (adjust based on auth implementation)
-    const tenantId = DEFAULT_TENANT_ID; // TODO: Extract from authenticated user
+    const userIp = getUserIp(req);
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
 
     return await storageSubCategory.updateSubCategory(id, tenantId, {
       ...updates,

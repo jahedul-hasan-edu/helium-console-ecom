@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import type { Server } from "http";
+import { registerAuthRoutes } from "./api/controllers/auth";
 import { registerUserRoutes } from "./api/controllers/users";
 import { registerTenantRoutes } from "./api/controllers/tenants";
 import { registerOrderRoutes } from "./api/controllers/orders";
@@ -14,12 +15,18 @@ import { registerTenantSubscriptionRoutes } from "./api/controllers/tenantSubscr
 import { registerFaqRoutes } from "./api/controllers/faqs";
 import { registerHomeSettingRoutes } from "./api/controllers/homeSettings";
 import { registerPopupAdRoutes } from "./api/controllers/popupAds";
+import { registerNavigationRoutes } from "./api/controllers/navigation";
+import { authMiddleware } from "./shared/middleware/authMiddleware";
+import { authorizationMiddleware } from "./shared/middleware/authorizationMiddleware";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Register feature routes
+  await registerAuthRoutes(app);
+
+  app.use("/api/admin", authMiddleware, authorizationMiddleware);
+
   await registerUserRoutes(app);
   await registerTenantRoutes(app);
   await registerOrderRoutes(app);
@@ -34,6 +41,7 @@ export async function registerRoutes(
   await registerFaqRoutes(app);
   await registerHomeSettingRoutes(app);
   await registerPopupAdRoutes(app);
+  await registerNavigationRoutes(app);
 
   return httpServer;
 }

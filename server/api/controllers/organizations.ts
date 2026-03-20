@@ -6,6 +6,7 @@ import { asyncHandler } from "../../shared/utils/asyncHandler";
 import { ResponseHandler } from "server/shared/utils/ResponseHandler";
 import { HTTP_STATUS, ORGANIZATION_MESSAGES } from "server/shared/constants";
 import { createOrganizationSchema, updateOrganizationSchema } from "server/shared/dtos/Organization";
+import { extractTenantId, type AuthenticatedRequest } from "server/shared/utils/requestContext";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -85,7 +86,10 @@ export async function registerOrganizationRoutes(app: Express): Promise<void> {
   app.get(
     api.organizations.get.path,
     asyncHandler(async (req, res) => {
-      const tenantId = (req.query.tenantId as string) || "0027d5b0-9a89-48f0-95fd-2228294ff053";
+      const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+      if (!tenantId) {
+        return ResponseHandler.error(res, "Tenant context is required", HTTP_STATUS.BAD_REQUEST);
+      }
       const organization = await organizationService.getOrganization(req.params.id, tenantId);
 
       if (!organization) {
@@ -158,7 +162,10 @@ export async function registerOrganizationRoutes(app: Express): Promise<void> {
   app.delete(
     api.organizations.delete.path,
     asyncHandler(async (req, res) => {
-      const tenantId = (req.query.tenantId as string) || "0027d5b0-9a89-48f0-95fd-2228294ff053";
+      const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+      if (!tenantId) {
+        return ResponseHandler.error(res, "Tenant context is required", HTTP_STATUS.BAD_REQUEST);
+      }
 
       await organizationService.deleteOrganization(req.params.id, tenantId);
 

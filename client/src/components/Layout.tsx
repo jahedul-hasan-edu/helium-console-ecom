@@ -16,7 +16,16 @@ import {
   Layers,
   Package,
   HelpCircle,
-  Settings
+  Settings,
+  Building,
+  FolderClosed,
+  FolderOpen,
+  FolderTree,
+  Home,
+  Megaphone,
+  Shield,
+  FileText,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,27 +41,69 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigation } from "@/hooks/use-Navigation";
+import type { NavigationItem } from "@/models/Navigation";
+import { useQuery } from "@tanstack/react-query";
+import { apiService } from "@/lib/apiService";
+import type { Tenant } from "@/models/Tenant";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const navigation = [
-   { name: 'Subscription Plans', href: '/admin/subscription-plans', icon: Package },
-   { name: 'Tenants', href: '/admin/tenants', icon: Calendar },
-  { name: 'Organizations', href: '/admin/organizations', icon: Building2 },
-  { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
-   { name: 'Tenant Subscriptions', href: '/admin/tenant-subscriptions', icon: Briefcase },
-  { name: 'Users', href: '/admin/users', icon: Users },
-  { name: 'Main Categories', href: '/admin/main-categories', icon: ShoppingBag },
-  { name: 'Categories', href: '/admin/categories', icon: Tag },
-  { name: 'Sub Categories', href: '/admin/sub-categories', icon: Tags },
-  { name: 'Sub Sub Categories', href: '/admin/sub-sub-categories', icon: Layers },
-  { name: 'Products', href: '/admin/products', icon: Package },
-  { name: 'FAQs', href: '/admin/faqs', icon: HelpCircle },
-  { name: 'Home Settings', href: '/admin/home-settings', icon: Settings },
-  { name: 'Popup Ads', href: '/admin/popup-ads', icon: Bell }
-];
+const iconMap: Record<string, LucideIcon> = {
+  Bell,
+  Briefcase,
+  Building,
+  Building2,
+  Calendar,
+  FileText,
+  FolderClosed,
+  FolderOpen,
+  FolderTree,
+  HelpCircle,
+  Home,
+  LayoutDashboard,
+  Layers,
+  Megaphone,
+  Package,
+  Search,
+  Settings,
+  Shield,
+  ShoppingBag,
+  ShoppingCart,
+  Tag,
+  Tags,
+  Users,
+};
+
+function flattenNavigation(items: NavigationItem[]): NavigationItem[] {
+  return items.flatMap((item) => [item, ...(item.children ? flattenNavigation(item.children) : [])]);
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { data: navigation = [] } = useNavigation(true);
+  const { user, logout, isSuperAdmin, selectedTenantId, setSelectedTenantId } = useAuth();
+
+  const { data: tenantsData } = useQuery({
+    queryKey: ["layout-tenants"],
+    queryFn: () =>
+      apiService.get<{ items: Tenant[] }>("/api/admin/tenants?page=1&pageSize=200", {
+        showSuccessToast: false,
+        showErrorToast: false,
+      }),
+    enabled: isSuperAdmin,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const sidebarItems = navigation.length > 0 ? navigation : [];
+  const allNavigationItems = flattenNavigation(sidebarItems);
 
   const NavContent = () => (
     <>
@@ -63,10 +114,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <span className="text-xl font-bold font-display tracking-tight">Helium Console</span>
       </div>
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-        {navigation.map((item) => {
-          const isActive = location === item.href || (item.href !== '/admin' && location.startsWith(item.href));
+        {sidebarItems.map((item) => {
+          const Icon = iconMap[item.icon || "FileText"] || FileText;
+          const isActive = location === item.routePath || (item.routePath !== '/admin' && location.startsWith(item.routePath));
           return (
-            <Link key={item.name} href={item.href}>
+            <Link key={item.id} href={item.routePath}>
               <div
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer group",
@@ -76,8 +128,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 )}
                 onClick={() => setIsMobileOpen(false)}
               >
-                <item.icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} />
-                {item.name}
+                <Icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} />
+                {item.title}
               </div>
             </Link>
           );
@@ -120,6 +172,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            {isSuperAdmin && (
+              <div className="hidden md:block w-52">
+                <Select value={selectedTenantId || "all"} onValueChange={(value) => setSelectedTenantId(value === "all" ? null : value)}>
+                  <SelectTrigger className="bg-muted/30 border-transparent">
+                    <SelectValue placeholder="All tenants" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All tenants</SelectItem>
+                    {tenantsData?.items?.map((tenant) => (
+                      <SelectItem key={tenant.id} value={tenant.id}>
+                        {tenant.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="w-5 h-5 text-muted-foreground" />
               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-card"></span>
@@ -130,11 +199,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Button variant="ghost" className="pl-2 pr-1 h-10 rounded-full gap-2">
                   <Avatar className="h-8 w-8 border border-border">
                     <AvatarImage src="/placeholder-avatar.jpg" />
-                    <AvatarFallback className="bg-primary/10 text-primary">JD</AvatarFallback>
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      {`${user?.firstName?.[0] || "A"}${user?.lastName?.[0] || "U"}`}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="hidden sm:flex flex-col items-start text-xs mr-2">
-                    <span className="font-semibold">John Doe</span>
-                    <span className="text-muted-foreground">Admin</span>
+                    <span className="font-semibold">{`${user?.firstName || "Authenticated"} ${user?.lastName || "User"}`.trim()}</span>
+                    <span className="text-muted-foreground">{user?.roleName?.replace(/_/g, " ") || "User"}</span>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
@@ -144,7 +215,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <DropdownMenuItem>Profile</DropdownMenuItem>
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive">
+                <DropdownMenuItem className="text-destructive" onClick={() => void logout()}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Log out
                 </DropdownMenuItem>

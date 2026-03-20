@@ -3,8 +3,7 @@ import { CreateMainCategoryDTO, GetMainCategoriesOptions, GetMainCategoriesRespo
 import { Request } from "express";
 import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
 import { MAIN_CATEGORY_SORT_FIELDS } from "server/shared/constants/feature/mainCategoryMessages";
-
-const DEFAULT_TENANT_ID = "0027d5b0-9a89-48f0-95fd-2228294ff053";
+import { extractTenantId, getUserIp, type AuthenticatedRequest } from "server/shared/utils/requestContext";
 
 /**
  * Main Category Service
@@ -23,7 +22,10 @@ export class MainCategoryService {
     const sortOrder = (req.query.sortOrder as "asc" | "desc") || PAGINATION_DEFAULTS.SORT_ORDER;
     
     // Extract tenant ID from request (adjust based on auth implementation)
-    const tenantId = DEFAULT_TENANT_ID; // TODO: Extract from authenticated user
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
     
     const options: GetMainCategoriesOptions = {
       page,
@@ -55,10 +57,11 @@ export class MainCategoryService {
    */
   async createMainCategory(req: Request): Promise<MainCategoryResponseDTO> {
     const mainCategoryData: CreateMainCategoryDTO = req.body;
-    const userIp = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
-    
-    // Extract tenant ID from request (adjust based on auth implementation)
-    const tenantId = DEFAULT_TENANT_ID; // TODO: Extract from authenticated user
+    const userIp = getUserIp(req);
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
 
     return await storageMainCategory.createMainCategory({
       ...mainCategoryData,
@@ -71,10 +74,11 @@ export class MainCategoryService {
    * Update a main category
    */
   async updateMainCategory(id: string, updates: UpdateMainCategoryDTO, req: Request): Promise<MainCategoryResponseDTO> {
-    const userIp = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
-    
-    // Extract tenant ID from request (adjust based on auth implementation)
-    const tenantId = DEFAULT_TENANT_ID; // TODO: Extract from authenticated user
+    const userIp = getUserIp(req);
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
 
     return await storageMainCategory.updateMainCategory(id, tenantId, {
       ...updates,

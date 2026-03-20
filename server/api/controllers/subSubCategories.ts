@@ -4,8 +4,7 @@ import { asyncHandler } from "../../shared/utils/asyncHandler";
 import { ResponseHandler } from "server/shared/utils/ResponseHandler";
 import { HTTP_STATUS, SUB_SUB_CATEGORY_MESSAGES } from "server/shared/constants";
 import { api } from "../routes/subSubCategoryRoute";
-
-const DEFAULT_TENANT_ID = "0027d5b0-9a89-48f0-95fd-2228294ff053";
+import { extractTenantId, type AuthenticatedRequest } from "server/shared/utils/requestContext";
 
 export async function registerSubSubCategoryRoutes(app: Express): Promise<void> {
   app.get(
@@ -29,7 +28,10 @@ export async function registerSubSubCategoryRoutes(app: Express): Promise<void> 
     "/api/admin/sub-sub-categories/check-slug",
     asyncHandler(async (req, res) => {
       const slug = req.query.slug as string;
-      const tenantId = DEFAULT_TENANT_ID; // TODO: Extract from authenticated user
+      const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+      if (!tenantId) {
+        return ResponseHandler.error(res, "Tenant context is required", HTTP_STATUS.BAD_REQUEST);
+      }
       
       if (!slug) {
         return ResponseHandler.error(res, "Slug is required", HTTP_STATUS.BAD_REQUEST);
@@ -57,7 +59,10 @@ export async function registerSubSubCategoryRoutes(app: Express): Promise<void> 
   app.get(
     api.subSubCategories.get.path,
     asyncHandler(async (req, res) => {
-      const tenantId = DEFAULT_TENANT_ID; // TODO: Extract from authenticated user
+      const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+      if (!tenantId) {
+        return ResponseHandler.error(res, "Tenant context is required", HTTP_STATUS.BAD_REQUEST);
+      }
       const subSubCategory = await subSubCategoryService.getSubSubCategory(req.params.id, tenantId);
       if (!subSubCategory) {
         return ResponseHandler.error(res, SUB_SUB_CATEGORY_MESSAGES.SUB_SUB_CATEGORY_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
@@ -77,7 +82,10 @@ export async function registerSubSubCategoryRoutes(app: Express): Promise<void> 
   app.delete(
     api.subSubCategories.delete.path,
     asyncHandler(async (req, res) => {
-      const tenantId = DEFAULT_TENANT_ID; // TODO: Extract from authenticated user
+      const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+      if (!tenantId) {
+        return ResponseHandler.error(res, "Tenant context is required", HTTP_STATUS.BAD_REQUEST);
+      }
       await subSubCategoryService.deleteSubSubCategory(req.params.id, tenantId);
       ResponseHandler.success(res, SUB_SUB_CATEGORY_MESSAGES.SUB_SUB_CATEGORY_DELETED_SUCCESSFULLY, null, HTTP_STATUS.OK);
     })

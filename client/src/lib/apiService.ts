@@ -14,10 +14,64 @@ interface ApiRequestOptions {
   successMessage?: string;
   errorMessage?: string;
   headers?: Record<string, string>;
+  _isRetry?: boolean;
 }
 
 class ApiService {
   private baseUrl = "";
+
+  private getStoredAuthUser(): { roleName?: string } | null {
+    const rawValue = localStorage.getItem("authUser");
+    if (!rawValue) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(rawValue) as { roleName?: string };
+    } catch {
+      return null;
+    }
+  }
+
+  private appendTenantScope(url: string, body?: any, isFormData: boolean = false): { url: string; body?: any } {
+    if (!url.startsWith("/api/admin")) {
+      return { url, body };
+    }
+
+    const authUser = this.getStoredAuthUser();
+    const selectedTenantId = localStorage.getItem("selectedTenantId");
+    if (authUser?.roleName !== "super_admin" || !selectedTenantId) {
+      return { url, body };
+    }
+
+    const parsedUrl = new URL(url, window.location.origin);
+    if (!parsedUrl.searchParams.has("tenantId")) {
+      parsedUrl.searchParams.set("tenantId", selectedTenantId);
+    }
+
+    if (!body) {
+      return { url: `${parsedUrl.pathname}${parsedUrl.search}`, body };
+    }
+
+    if (isFormData) {
+      if (!body.has("tenantId")) {
+        body.append("tenantId", selectedTenantId);
+      }
+      return { url: `${parsedUrl.pathname}${parsedUrl.search}`, body };
+    }
+
+    if (typeof body === "object" && !Array.isArray(body) && !("tenantId" in body)) {
+      return {
+        url: `${parsedUrl.pathname}${parsedUrl.search}`,
+        body: {
+          ...body,
+          tenantId: selectedTenantId,
+        },
+      };
+    }
+
+    return { url: `${parsedUrl.pathname}${parsedUrl.search}`, body };
+  }
 
   private getHeaders(customHeaders?: Record<string, string>): Record<string, string> {
     const headers: Record<string, string> = {
@@ -32,6 +86,97 @@ class ApiService {
     }
 
     return headers;
+  }
+
+  private async tryRefreshToken(): Promise<boolean> {
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (!refreshToken) {
+      return false;
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const payload: ApiResponseData<{ accessToken: string; refreshToken: string }> = await response.json();
+      if (!payload.data?.accessToken || !payload.data?.refreshToken) {
+        return false;
+      }
+
+      this.setTokens(payload.data.accessToken, payload.data.refreshToken);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private dispatchForcedLogout(): void {
+    this.clearTokens();
+    window.dispatchEvent(new Event("auth:logout"));
+  }
+
+  private async request<T = any>(
+    method: string,
+    url: string,
+    body: any,
+    options: ApiRequestOptions = {},
+    isFormData: boolean = false,
+  ): Promise<T> {
+    const scopedRequest = this.appendTenantScope(url, body, isFormData);
+    const headers = isFormData
+      ? {
+          ...(localStorage.getItem("authToken")
+            ? { Authorization: `Bearer ${localStorage.getItem("authToken")}` }
+            : {}),
+          ...(options.headers || {}),
+        }
+      : this.getHeaders(options.headers);
+
+    const response = await fetch(`${this.baseUrl}${scopedRequest.url}`, {
+      method,
+      headers,
+      body: scopedRequest.body
+        ? isFormData
+          ? scopedRequest.body
+          : JSON.stringify(scopedRequest.body)
+        : undefined,
+      credentials: "include",
+    });
+
+    if (response.status === 401 && !options._isRetry && !url.startsWith("/api/auth/")) {
+      const refreshed = await this.tryRefreshToken();
+      if (refreshed) {
+        return this.request<T>(method, url, body, { ...options, _isRetry: true }, isFormData);
+      }
+      this.dispatchForcedLogout();
+    }
+
+    if (response.status === 403) {
+      const clone = response.clone();
+      try {
+        const payload = (await clone.json()) as ApiResponseData;
+        if (payload.message?.includes("Subscription expired")) {
+          toast({
+            title: "Session expired",
+            description: "Your tenant subscription has expired.",
+            variant: "destructive",
+          });
+          this.dispatchForcedLogout();
+        }
+      } catch {
+        // Ignore body parsing failure here.
+      }
+    }
+
+    return this.handleResponse<T>(response, options);
   }
 
   private async handleResponse<T>(
@@ -76,13 +221,7 @@ class ApiService {
     url: string,
     options: ApiRequestOptions = {}
   ): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${url}`, {
-      method: "GET",
-      headers: this.getHeaders(options.headers),
-      credentials: "include",
-    });
-
-    return this.handleResponse<T>(response, options);
+    return this.request<T>("GET", url, undefined, options);
   }
 
   async post<T = any>(
@@ -90,14 +229,7 @@ class ApiService {
     body?: any,
     options: ApiRequestOptions = {}
   ): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${url}`, {
-      method: "POST",
-      headers: this.getHeaders(options.headers),
-      body: body ? JSON.stringify(body) : undefined,
-      credentials: "include",
-    });
-
-    return this.handleResponse<T>(response, options);
+    return this.request<T>("POST", url, body, options);
   }
 
   async put<T = any>(
@@ -105,14 +237,7 @@ class ApiService {
     body?: any,
     options: ApiRequestOptions = {}
   ): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${url}`, {
-      method: "PUT",
-      headers: this.getHeaders(options.headers),
-      body: body ? JSON.stringify(body) : undefined,
-      credentials: "include",
-    });
-
-    return this.handleResponse<T>(response, options);
+    return this.request<T>("PUT", url, body, options);
   }
 
   async patch<T = any>(
@@ -120,27 +245,14 @@ class ApiService {
     body?: any,
     options: ApiRequestOptions = {}
   ): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${url}`, {
-      method: "PATCH",
-      headers: this.getHeaders(options.headers),
-      body: body ? JSON.stringify(body) : undefined,
-      credentials: "include",
-    });
-
-    return this.handleResponse<T>(response, options);
+    return this.request<T>("PATCH", url, body, options);
   }
 
   async delete<T = any>(
     url: string,
     options: ApiRequestOptions = {}
   ): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${url}`, {
-      method: "DELETE",
-      headers: this.getHeaders(options.headers),
-      credentials: "include",
-    });
-
-    return this.handleResponse<T>(response, options);
+    return this.request<T>("DELETE", url, undefined, options);
   }
 
   async postFormData<T = any>(
@@ -148,23 +260,7 @@ class ApiService {
     formData: FormData,
     options: ApiRequestOptions = {}
   ): Promise<T> {
-    const headers: Record<string, string> = {};
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-    if (options.headers) {
-      Object.assign(headers, options.headers);
-    }
-
-    const response = await fetch(`${this.baseUrl}${url}`, {
-      method: "POST",
-      headers,
-      body: formData,
-      credentials: "include",
-    });
-
-    return this.handleResponse<T>(response, options);
+    return this.request<T>("POST", url, formData, options, true);
   }
 
   async patchFormData<T = any>(
@@ -172,23 +268,7 @@ class ApiService {
     formData: FormData,
     options: ApiRequestOptions = {}
   ): Promise<T> {
-    const headers: Record<string, string> = {};
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-    if (options.headers) {
-      Object.assign(headers, options.headers);
-    }
-
-    const response = await fetch(`${this.baseUrl}${url}`, {
-      method: "PATCH",
-      headers,
-      body: formData,
-      credentials: "include",
-    });
-
-    return this.handleResponse<T>(response, options);
+    return this.request<T>("PATCH", url, formData, options, true);
   }
 
   setAuthToken(token: string): void {
@@ -197,6 +277,20 @@ class ApiService {
 
   clearAuthToken(): void {
     localStorage.removeItem("authToken");
+  }
+
+  setTokens(accessToken: string, refreshToken: string): void {
+    localStorage.setItem("authToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
+  }
+
+  clearTokens(): void {
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("refreshToken");
+  }
+
+  getAccessToken(): string | null {
+    return localStorage.getItem("authToken");
   }
 
   // Category API methods

@@ -3,7 +3,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Layout } from "@/components/Layout";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AuthShell } from "@/components/AuthShell";
 import Dashboard from "@/pages/Dashboard";
 import Orders from "@/pages/order/Orders";
 import Users from "@/pages/user/Users";
@@ -20,58 +21,70 @@ import Faqs from "./pages/faq/Faqs";
 import HomeSettings from "./pages/homeSetting/HomeSettings";
 import Organizations from "./pages/organization/Organizations";
 import PopupAds from "./pages/popupAd/PopupAds";
+import Login from "@/pages/auth/Login";
+import TwoFactorVerify from "@/pages/auth/TwoFactorVerify";
+
+function RootRedirect() {
+  const { isAuthenticated, isInitializing } = useAuth();
+
+  if (isInitializing) {
+    return null;
+  }
+
+  return <Redirect to={isAuthenticated ? "/admin" : "/login"} />;
+}
 
 function Router() {
   return (
     <Switch>
-      {/* Admin Redirect */}
-      <Route path="/" component={() => <Redirect to="/admin" />} />
+      <Route path="/" component={RootRedirect} />
+      <Route path="/login" component={Login} />
+      <Route path="/2fa-verify" component={TwoFactorVerify} />
 
-      {/* Admin Routes */}
       <Route path="/admin">
-        <Layout><Dashboard /></Layout>
+        <AuthShell><Dashboard /></AuthShell>
       </Route>
       <Route path="/admin/tenants">
-        <Layout><Tenants /></Layout>
+        <AuthShell><Tenants /></AuthShell>
       </Route>
       <Route path="/admin/organizations">
-        <Layout><Organizations /></Layout>
+        <AuthShell><Organizations /></AuthShell>
       </Route>
       <Route path="/admin/orders">
-        <Layout><Orders /></Layout>
+        <AuthShell><Orders /></AuthShell>
       </Route>
       <Route path="/admin/subscription-plans">
-        <Layout><SubscriptionPlans /></Layout>
+        <AuthShell><SubscriptionPlans /></AuthShell>
       </Route>
       <Route path="/admin/tenant-subscriptions">
-        <Layout><TenantSubscriptions /></Layout>
+        <AuthShell><TenantSubscriptions /></AuthShell>
       </Route>
       <Route path="/admin/users">
-        <Layout><Users /></Layout>
+        <AuthShell><Users /></AuthShell>
       </Route>
       <Route path="/admin/main-categories">
-        <Layout><MainCategories /></Layout>
+        <AuthShell><MainCategories /></AuthShell>
       </Route>
       <Route path="/admin/categories">
-        <Layout><Categories /></Layout>
+        <AuthShell><Categories /></AuthShell>
       </Route>
       <Route path="/admin/sub-categories">
-        <Layout><SubCategories /></Layout>
+        <AuthShell><SubCategories /></AuthShell>
       </Route>
       <Route path="/admin/sub-sub-categories">
-        <Layout><SubSubCategories /></Layout>
+        <AuthShell><SubSubCategories /></AuthShell>
       </Route>
       <Route path="/admin/products">
-        <Layout><Products /></Layout>
+        <AuthShell><Products /></AuthShell>
       </Route>
       <Route path="/admin/faqs">
-        <Layout><Faqs /></Layout>
+        <AuthShell><Faqs /></AuthShell>
       </Route>
       <Route path="/admin/home-settings">
-        <Layout><HomeSettings /></Layout>
+        <AuthShell><HomeSettings /></AuthShell>
       </Route>
       <Route path="/admin/popup-ads">
-        <Layout><PopupAds /></Layout>
+        <AuthShell><PopupAds /></AuthShell>
       </Route>
 
       <Route component={NotFound} />
@@ -82,10 +95,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

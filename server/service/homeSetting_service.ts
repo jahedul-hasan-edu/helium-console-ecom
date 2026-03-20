@@ -4,8 +4,7 @@ import { homeSettingImageService } from "./homeSetting_image_service";
 import { CreateHomeSettingDTO, GetHomeSettingsOptions, UpdateHomeSettingDTO } from "server/shared/dtos/HomeSetting";
 import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
 import { HOME_SETTING_SORT_FIELDS } from "server/shared/constants/feature/homeSettingMessages";
-
-const DEFAULT_TENANT_ID = "0027d5b0-9a89-48f0-95fd-2228294ff053";
+import { extractTenantId, getUserIp, type AuthenticatedRequest } from "server/shared/utils/requestContext";
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB in bytes
 
 export const homeSettingService = {
@@ -15,7 +14,10 @@ export const homeSettingService = {
     const search = req.query.search as string | undefined;
     const sortBy = (req.query.sortBy as any) || HOME_SETTING_SORT_FIELDS.CREATED_ON;
     const sortOrder = (req.query.sortOrder as "asc" | "desc") || PAGINATION_DEFAULTS.SORT_ORDER;
-    const tenantId = (req.query.tenantId as string) || DEFAULT_TENANT_ID;
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
       
     const options: GetHomeSettingsOptions = {
       page,
@@ -28,13 +30,16 @@ export const homeSettingService = {
     return await storageHomeSetting.getHomeSettings(tenantId, options);
   },
 
-  async getHomeSetting(id: string, tenantId: string = DEFAULT_TENANT_ID) {
+  async getHomeSetting(id: string, tenantId: string) {
     return await storageHomeSetting.getHomeSetting(id, tenantId);
   },
 
   async createHomeSetting(req: Request) {
-    const tenantId = (req.body.tenantId as string) || DEFAULT_TENANT_ID;
-    const userIp = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
+    const userIp = getUserIp(req);
     const data: CreateHomeSettingDTO = req.body;
     const userId = (req as any).user?.id;
     
@@ -45,7 +50,7 @@ export const homeSettingService = {
     }
     
     // Create the home setting
-    const homeSetting = await storageHomeSetting.createHomeSetting({ ...data, userIp });
+    const homeSetting = await storageHomeSetting.createHomeSetting({ ...data, tenantId, userIp });
     
     console.log("req.files:", (req as any).files);
     // Handle image uploads if files are provided
@@ -72,8 +77,11 @@ export const homeSettingService = {
   },
 
   async updateHomeSetting(id: string, req: Request) {
-    const tenantId = (req.body.tenantId as string) || DEFAULT_TENANT_ID;
-    const userIp = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
+    const userIp = getUserIp(req);
     const updates: UpdateHomeSettingDTO = req.body;
     const userId = (req as any).user?.id;
     
@@ -127,7 +135,7 @@ export const homeSettingService = {
     return homeSetting;
   },
 
-  async deleteHomeSetting(id: string, tenantId: string = DEFAULT_TENANT_ID) {
+  async deleteHomeSetting(id: string, tenantId: string) {
     // Delete associated images from storage and database
     const homeSetting = await storageHomeSetting.getHomeSetting(id, tenantId);
     if (!homeSetting) {

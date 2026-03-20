@@ -5,8 +5,7 @@ import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
 import { ORGANIZATION_MESSAGES, ORGANIZATION_SORT_FIELDS } from "server/shared/constants/feature/organizationMessages";
 import { CreateOrganizationDTO, GetOrganizationsOptions, UpdateOrganizationDTO } from "server/shared/dtos/Organization";
 import { storageOrganization } from "./repos/organization_repo";
-
-const DEFAULT_TENANT_ID = "0027d5b0-9a89-48f0-95fd-2228294ff053";
+import { extractTenantId, getUserIp, type AuthenticatedRequest } from "server/shared/utils/requestContext";
 const MAX_FILE_SIZE = 1024 * 1024;
 const ORGANIZATION_STORAGE_PATH = "organizations";
 
@@ -18,16 +17,8 @@ function createHttpError(message: string, statusCode: number): HttpError {
   return error;
 }
 
-function getUserIp(req: Request): string {
-  const forwardedFor = req.headers["x-forwarded-for"];
-  if (Array.isArray(forwardedFor)) {
-    return forwardedFor[0] || req.socket.remoteAddress || "";
-  }
-  return forwardedFor || req.socket.remoteAddress || "";
-}
-
 function getCurrentTenantId(req: Request): string {
-  return (req.query.tenantId as string) || DEFAULT_TENANT_ID;
+  return extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId || (req.query.tenantId as string);
 }
 
 export const organizationService = {
@@ -50,12 +41,12 @@ export const organizationService = {
     return storageOrganization.getOrganizations(tenantId, options);
   },
 
-  async getOrganization(id: string, tenantId: string = DEFAULT_TENANT_ID) {
+  async getOrganization(id: string, tenantId: string) {
     return storageOrganization.getOrganization(id, tenantId);
   },
 
   async createOrganization(req: Request) {
-    const tenantId = (req.body.tenantId as string) || DEFAULT_TENANT_ID;
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId || (req.body.tenantId as string);
     const data: CreateOrganizationDTO = req.body;
     const userIp = getUserIp(req);
     const userId = (req as any).user?.id as string | undefined;
@@ -165,7 +156,7 @@ export const organizationService = {
     });
   },
 
-  async deleteOrganization(id: string, tenantId: string = DEFAULT_TENANT_ID) {
+  async deleteOrganization(id: string, tenantId: string) {
     const existingOrganization = await storageOrganization.getOrganization(id, tenantId);
     if (!existingOrganization) {
       throw createHttpError(ORGANIZATION_MESSAGES.ORGANIZATION_NOT_FOUND, HTTP_STATUS.NOT_FOUND);

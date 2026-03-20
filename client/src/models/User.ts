@@ -5,6 +5,9 @@ export interface User {
   lastName: string | null;
   email: string | null;
   mobile: string | null;
+  isActive?: boolean | null;
+  twoFactorEnabled?: boolean | null;
+  roleName?: string | null;
   createdBy: string | null;
   updatedBy: string | null;
   createdOn: Date | null;
@@ -18,12 +21,16 @@ export interface CreateUserRequest {
   email: string;
   mobile: string;
   password: string;
+  roleName?: "super_admin" | "tenant_admin" | "user";
+  tenantId?: string;
 }
 
 export interface UpdateUserRequest {
-  firstName: string;
-  lastName: string;
-  mobile: string;
+  firstName?: string;
+  lastName?: string;
+  mobile?: string;
+  roleName?: "super_admin" | "tenant_admin" | "user";
+  isActive?: boolean;
 }
 
 export interface UserResponse extends User {}

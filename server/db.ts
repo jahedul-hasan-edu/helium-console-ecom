@@ -18,6 +18,14 @@ import * as paymentSchemas from "./db/schemas/payments";
 import * as subscriptionPlanSchemas from "./db/schemas/subscriptionPlans";
 import * as tenantSubscriptionSchemas from "./db/schemas/tenantSubscriptions";
 import * as popupAdSchemas from "./db/schemas/popupAds";
+import * as roleSchemas from "./db/schemas/roles";
+import * as userRoleSchemas from "./db/schemas/userRoles";
+import * as pageSchemas from "./db/schemas/pages";
+import * as tenantPageSchemas from "./db/schemas/tenantPages";
+import * as tenantRolePageSchemas from "./db/schemas/tenantRolePages";
+import * as tenantRolePagePermissionSchemas from "./db/schemas/tenantRolePagePermissions";
+import * as sessionSchemas from "./db/schemas/sessions";
+import * as refreshTokenSchemas from "./db/schemas/refreshTokens";
 
 const schema = {
   ...tenantSchemas,
@@ -38,6 +46,14 @@ const schema = {
   ...subscriptionPlanSchemas,
   ...tenantSubscriptionSchemas,
   ...popupAdSchemas,
+  ...roleSchemas,
+  ...userRoleSchemas,
+  ...pageSchemas,
+  ...tenantPageSchemas,
+  ...tenantRolePageSchemas,
+  ...tenantRolePagePermissionSchemas,
+  ...sessionSchemas,
+  ...refreshTokenSchemas,
 };
 
 const { Pool } = pg;

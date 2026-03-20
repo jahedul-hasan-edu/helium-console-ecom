@@ -4,8 +4,7 @@ import { CreatePopupAdDTO, GetPopupAdsOptions, UpdatePopupAdDTO } from "server/s
 import { uploadImageToSupabase, deleteImageFromSupabase } from "server/shared/utils/supabaseStorage";
 import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
 import { POPUP_AD_SORT_FIELDS } from "server/shared/constants/feature/popupAdMessages";
-
-const DEFAULT_TENANT_ID = "0027d5b0-9a89-48f0-95fd-2228294ff053";
+import { extractTenantId, getUserIp, type AuthenticatedRequest } from "server/shared/utils/requestContext";
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB in bytes
 
 export const popupAdService = {
@@ -17,7 +16,10 @@ export const popupAdService = {
     const sortOrder = (req.query.sortOrder as "asc" | "desc") || PAGINATION_DEFAULTS.SORT_ORDER;
       
     // Extract tenant ID from request (adjust based on auth implementation)
-    const tenantId = DEFAULT_TENANT_ID; // TODO: Extract from authenticated user
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
       
     const options: GetPopupAdsOptions = {
       page,
@@ -30,13 +32,16 @@ export const popupAdService = {
     return await storagePopupAd.getPopupAds(tenantId, options);
   },
 
-  async getPopupAd(id: string, tenantId: string = DEFAULT_TENANT_ID) {
+  async getPopupAd(id: string, tenantId: string) {
     return await storagePopupAd.getPopupAd(id, tenantId);
   },
 
   async createPopupAd(req: Request) {
-    const tenantId = DEFAULT_TENANT_ID;
-    const userIp = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
+    const userIp = getUserIp(req);
     const data: CreatePopupAdDTO = req.body;
     const userId = (req as any).user?.id; // Extract from authenticated user context
     
@@ -60,6 +65,7 @@ export const popupAdService = {
       // Create popup ad first to get ID
       const tempPopupAd = await storagePopupAd.createPopupAd({ 
         ...data, 
+        tenantId,
         userIp,
       });
 
@@ -89,13 +95,17 @@ export const popupAdService = {
     // Create without image
     return await storagePopupAd.createPopupAd({ 
       ...data, 
+      tenantId,
       userIp,
     });
   },
 
   async updatePopupAd(id: string, req: Request) {
-    const tenantId = DEFAULT_TENANT_ID;
-    const userIp = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
+    const userIp = getUserIp(req);
     const updates: UpdatePopupAdDTO = req.body;
     const userId = (req as any).user?.id; // Extract from authenticated user context
     
@@ -163,7 +173,7 @@ export const popupAdService = {
     });
   },
 
-  async deletePopupAd(id: string, tenantId: string = DEFAULT_TENANT_ID) {
+  async deletePopupAd(id: string, tenantId: string) {
     // Get the popup ad to retrieve image URL
     const popupAd = await storagePopupAd.getPopupAd(id, tenantId);
     

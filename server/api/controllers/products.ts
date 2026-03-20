@@ -8,8 +8,7 @@ import { PRODUCT_MESSAGES } from "server/shared/constants/feature/productMessage
 import { createProductSchema, updateProductSchema } from "server/shared/dtos/Product";
 import { api } from "../routes/productRoute";
 import { HTTP_STATUS } from "server/shared/constants/httpStatus";
-
-const DEFAULT_TENANT_ID = "0027d5b0-9a89-48f0-95fd-2228294ff053";
+import { extractTenantId, type AuthenticatedRequest } from "server/shared/utils/requestContext";
 
 // Configure multer for image uploads
 const upload = multer({
@@ -62,7 +61,8 @@ export function registerProductRoutes(app: Express) {
     api.products.get.path,
     asyncHandler(async (req: Request, res: Response) => {
       const { id } = req.params;
-      const product = await productService.getProduct(id, DEFAULT_TENANT_ID);
+      const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+      const product = await productService.getProduct(id, tenantId!);
       
       if (!product) {
         return ResponseHandler.error(res, PRODUCT_MESSAGES.RECORD_NOT_FOUND, 404);
@@ -96,7 +96,8 @@ export function registerProductRoutes(app: Express) {
     api.products.delete.path,
     asyncHandler(async (req: Request, res: Response) => {
       const { id } = req.params;
-      await productService.deleteProduct(id, DEFAULT_TENANT_ID);
+      const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+      await productService.deleteProduct(id, tenantId!);
       return ResponseHandler.success(res, PRODUCT_MESSAGES.RECORD_DELETED, null, HTTP_STATUS.OK);
     })
   );

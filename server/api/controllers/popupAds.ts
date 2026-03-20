@@ -6,6 +6,7 @@ import { ResponseHandler } from "server/shared/utils/ResponseHandler";
 import { api } from "../routes/popupAdRoute";
 import { HTTP_STATUS, POPUP_AD_MESSAGES, POPUP_AD_SORT_FIELDS } from "server/shared/constants";
 import { createPopupAdSchema, updatePopupAdSchema } from "server/shared/dtos/PopupAd";
+import { extractTenantId, type AuthenticatedRequest } from "server/shared/utils/requestContext";
 
 // Configure multer for single image upload
 const upload = multer({
@@ -64,7 +65,10 @@ export async function registerPopupAdRoutes(app: Express): Promise<void> {
     api.popupAds.get.path,
     asyncHandler(async (req, res) => {
       const { id } = req.params;
-      const tenantId = (req as any).tenantId || "0027d5b0-9a89-48f0-95fd-2228294ff053";
+      const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+      if (!tenantId) {
+        return ResponseHandler.error(res, "Tenant context is required", HTTP_STATUS.BAD_REQUEST);
+      }
       
       const popupAd = await popupAdService.getPopupAd(id, tenantId);
 
@@ -107,7 +111,10 @@ export async function registerPopupAdRoutes(app: Express): Promise<void> {
     api.popupAds.delete.path,
     asyncHandler(async (req, res) => {
       const { id } = req.params;
-      const tenantId = (req as any).tenantId || "0027d5b0-9a89-48f0-95fd-2228294ff053";
+      const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+      if (!tenantId) {
+        return ResponseHandler.error(res, "Tenant context is required", HTTP_STATUS.BAD_REQUEST);
+      }
       
       await popupAdService.deletePopupAd(id, tenantId);
       ResponseHandler.success(res, POPUP_AD_MESSAGES.POPUP_AD_DELETED_SUCCESSFULLY, null, HTTP_STATUS.OK);

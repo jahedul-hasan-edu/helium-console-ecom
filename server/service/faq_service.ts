@@ -3,8 +3,7 @@ import { CreateFaqDTO, GetFaqsOptions, GetFaqsResponse, UpdateFaqDTO, FaqRespons
 import { Request } from "express";
 import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
 import { FAQ_SORT_FIELDS } from "server/shared/constants/feature/faqMessages";
-
-const DEFAULT_TENANT_ID = "0027d5b0-9a89-48f0-95fd-2228294ff053";
+import { extractTenantId, getUserIp, type AuthenticatedRequest } from "server/shared/utils/requestContext";
 
 /**
  * FAQ Service
@@ -21,7 +20,7 @@ export class FaqService {
     const search = req.query.search as string | undefined;
     const sortBy = (req.query.sortBy as any) || FAQ_SORT_FIELDS.CREATED_ON;
     const sortOrder = (req.query.sortOrder as "asc" | "desc") || PAGINATION_DEFAULTS.SORT_ORDER;
-    const filterTenantId = (req.query.tenantId as string) || (req as any).tenantId || DEFAULT_TENANT_ID;
+    const filterTenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
 
     const options: GetFaqsOptions = {
       page,
@@ -39,7 +38,10 @@ export class FaqService {
    * Get a single FAQ by ID
    */
   async getFaq(id: string, tenantId?: string): Promise<FaqResponseDTO | undefined> {
-    const finalTenantId = tenantId || DEFAULT_TENANT_ID;
+    const finalTenantId = tenantId;
+    if (!finalTenantId) {
+      throw new Error("Tenant context is required");
+    }
     return await storageFaq.getFaq(id, finalTenantId);
   }
 
@@ -48,8 +50,11 @@ export class FaqService {
    */
   async createFaq(req: Request): Promise<FaqResponseDTO> {
     const { title, answer, isActive, tenantId: requestTenantId } = req.body;
-    const tenantId = requestTenantId || (req as any).tenantId || DEFAULT_TENANT_ID;
-    const userIp = req.ip || req.socket.remoteAddress;
+    const tenantId = requestTenantId || extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
+    const userIp = getUserIp(req);
     const createdBy = (req as any).userId;
 
     // Check for duplicate FAQ (same title and tenant)
@@ -75,8 +80,11 @@ export class FaqService {
    */
   async updateFaq(id: string, req: Request): Promise<FaqResponseDTO> {
     const { title, answer, isActive } = req.body;
-    const tenantId = (req as any).tenantId || DEFAULT_TENANT_ID;
-    const userIp = req.ip || req.socket.remoteAddress;
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
+    const userIp = getUserIp(req);
     const updatedBy = (req as any).userId;
 
     // Check for duplicate FAQ when title is being updated
@@ -102,7 +110,10 @@ export class FaqService {
    * Delete a FAQ
    */
   async deleteFaq(id: string, tenantId?: string): Promise<void> {
-    const finalTenantId = tenantId || DEFAULT_TENANT_ID;
+    const finalTenantId = tenantId;
+    if (!finalTenantId) {
+      throw new Error("Tenant context is required");
+    }
     return await storageFaq.deleteFaq(id, finalTenantId);
   }
 }

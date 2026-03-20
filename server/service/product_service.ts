@@ -4,8 +4,7 @@ import { productImageService } from "./product_image_service";
 import { CreateProductDTO, GetProductsOptions, UpdateProductDTO } from "server/shared/dtos/Product";
 import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
 import { PRODUCT_SORT_FIELDS } from "server/shared/constants/feature/productMessages";
-
-const DEFAULT_TENANT_ID = "0027d5b0-9a89-48f0-95fd-2228294ff053";
+import { extractTenantId, getUserIp, type AuthenticatedRequest } from "server/shared/utils/requestContext";
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB in bytes
 
 export const productService = {
@@ -16,8 +15,10 @@ export const productService = {
     const sortBy = (req.query.sortBy as any) || PRODUCT_SORT_FIELDS.CREATED_ON;
     const sortOrder = (req.query.sortOrder as "asc" | "desc") || PAGINATION_DEFAULTS.SORT_ORDER;
       
-      // Extract tenant ID from request (adjust based on auth implementation)
-    const tenantId = DEFAULT_TENANT_ID; // TODO: Extract from authenticated user
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
       
     const options: GetProductsOptions = {
       page,
@@ -30,13 +31,16 @@ export const productService = {
     return await storageProduct.getProducts(tenantId, options);
   },
 
-  async getProduct(id: string, tenantId: string = DEFAULT_TENANT_ID) {
+  async getProduct(id: string, tenantId: string) {
     return await storageProduct.getProduct(id, tenantId);
   },
 
   async createProduct(req: Request) {
-    const tenantId = DEFAULT_TENANT_ID;
-    const userIp = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
+    const userIp = getUserIp(req);
     const data: CreateProductDTO = req.body;
     const userId = (req as any).user?.id; // Extract from authenticated user context
     
@@ -68,8 +72,11 @@ export const productService = {
   },
 
   async updateProduct(id: string, req: Request) {
-    const tenantId = DEFAULT_TENANT_ID;
-    const userIp = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
+    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context is required");
+    }
+    const userIp = getUserIp(req);
     const updates: UpdateProductDTO = req.body;
     const userId = (req as any).user?.id; // Extract from authenticated user context
     
@@ -118,7 +125,7 @@ export const productService = {
     return product;
   },
 
-  async deleteProduct(id: string, tenantId: string = DEFAULT_TENANT_ID) {
+  async deleteProduct(id: string, tenantId: string) {
     // Delete all associated images
     await productImageService.deleteProductImages(id);
     
