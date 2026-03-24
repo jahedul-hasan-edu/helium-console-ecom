@@ -1,9 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiService } from "@/lib/apiService";
 import { CreateUserRequest, UpdateUserRequest, User } from "@/models/User";
-import { buildUrl } from "@/lib/buildUrl";
 import { api } from "@/routes/userRoute";
-import { SORT_ORDERS } from "@/lib/constants";
 import { ListResponse, QueryParams } from "@/lib/interface";
 
 // USERS

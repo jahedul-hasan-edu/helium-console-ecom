@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { users } from "../../db/schemas/users";
-import { RoleName } from "server/shared/constants/enums";
+import { RoleName, TwoFactorMethod } from "server/shared/constants/enums";
 import { PaginationOptions, PaginationResponse } from "../utils/pagination";
 import { USER_SORT_FIELDS, UserSortField } from "../constants/feature/userMessages";
 
@@ -16,7 +16,10 @@ export const createUserSchema = z.object({
   mobile: z.string().min(1, "Mobile is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   tenantId: z.string().uuid().optional(),
+  roleId: z.string().uuid().optional(),
   roleName: z.nativeEnum(RoleName).optional(),
+  twoFactorMethod: z.nativeEnum(TwoFactorMethod).nullable().optional(),
+  twoFactorEnabled: z.boolean().optional(),
   isActive: z.boolean().optional(),
 }).strict();
 
@@ -28,7 +31,10 @@ export const updateUserSchema = z.object({
   lastName: z.string().min(1, "Last name is required").optional(),
   mobile: z.string().min(1, "Mobile is required").optional(),
   tenantId: z.string().uuid().optional(),
+  roleId: z.string().uuid().optional(),
   roleName: z.nativeEnum(RoleName).optional(),
+  twoFactorMethod: z.nativeEnum(TwoFactorMethod).nullable().optional(),
+  twoFactorEnabled: z.boolean().optional(),
   isActive: z.boolean().optional(),
 }).strict();
 
@@ -42,9 +48,13 @@ export const userResponseSchema = z.object({
   lastName: z.string().nullable(),
   email: z.string().nullable(),
   mobile: z.string().nullable(),
+  tenantName: z.string().nullable().optional(),
   isActive: z.boolean().nullable().optional(),
   twoFactorEnabled: z.boolean().nullable().optional(),
+  twoFactorMethod: z.string().nullable().optional(),
+  roleId: z.string().uuid().nullable().optional(),
   roleName: z.string().nullable().optional(),
+  roleDisplayName: z.string().nullable().optional(),
   createdBy: z.string().uuid().nullable(),
   updatedBy: z.string().uuid().nullable(),
   createdOn: z.date().nullable(),

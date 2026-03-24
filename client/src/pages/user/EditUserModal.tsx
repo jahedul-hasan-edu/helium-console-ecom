@@ -13,6 +13,10 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { User } from "@/models/User";
 import { getFieldError, ValidationError } from "@/lib/formValidator";
 import { FormValidator } from "./formValidator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useRoles } from "@/hooks/use-Role";
+
+type TwoFactorMode = "disabled" | "email" | "app";
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -20,6 +24,7 @@ interface EditUserModalProps {
   user?: User;
   onSubmit: (data: any) => Promise<void>;
   isLoading: boolean;
+  tenantId?: string | null;
 }
 
 export function EditUserModal({
@@ -28,14 +33,18 @@ export function EditUserModal({
   user,
   onSubmit,
   isLoading,
+  tenantId,
 }: EditUserModalProps) {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     mobile: "",
+    roleId: "",
+    twoFactorMode: "disabled" as TwoFactorMode,
   });
 
   const [errors, setErrors] = useState<ValidationError[]>([]);
+  const { data: roles = [] } = useRoles(tenantId, isOpen && !!tenantId);
 
   useEffect(() => {
     if (user) {
@@ -43,6 +52,13 @@ export function EditUserModal({
         firstName: user.firstName || "",
         lastName: user.lastName || "",
         mobile: user.mobile || "",
+        roleId: user.roleId || "",
+        twoFactorMode:
+          user.twoFactorMethod === "email"
+            ? "email"
+            : user.twoFactorMethod === "app"
+              ? "app"
+              : "disabled",
       });
       setErrors([]);
     }
@@ -69,7 +85,10 @@ export function EditUserModal({
     }
 
     try {
-      await onSubmit(formData);
+      await onSubmit({
+        ...formData,
+        twoFactorMethod: formData.twoFactorMode === "disabled" ? null : formData.twoFactorMode,
+      });
     } catch (error) {
       console.error("Submit error:", error);
     }
@@ -160,6 +179,42 @@ export function EditUserModal({
                 {getFieldError("mobile", errors)}
               </div>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              Role <span className="text-destructive">*</span>
+            </Label>
+            <Select value={formData.roleId} onValueChange={(value) => setFormData((prev) => ({ ...prev, roleId: value }))}>
+              <SelectTrigger className={getFieldError("roleId", errors) ? "border-destructive" : ""}>
+                <SelectValue placeholder={tenantId ? "Select role" : "Select a tenant first"} />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.map((role) => (
+                  <SelectItem key={role.id} value={role.id}>{role.displayName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {getFieldError("roleId", errors) && (
+              <div className="flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="h-3 w-3" />
+                {getFieldError("roleId", errors)}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>2FA Configuration</Label>
+            <Select value={formData.twoFactorMode} onValueChange={(value: TwoFactorMode) => setFormData((prev) => ({ ...prev, twoFactorMode: value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select 2FA mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="disabled">Disabled</SelectItem>
+                <SelectItem value="email">Email OTP required</SelectItem>
+                <SelectItem value="app">Authenticator app setup pending</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

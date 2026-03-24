@@ -29,6 +29,7 @@ interface AuthContextValue {
   register: (payload: RegisterSuperAdminRequest | RegisterTenantAdminRequest) => Promise<AuthSuccessResponse>;
   verifyTwoFactor: (tempToken: string, code: string) => Promise<AuthSuccessResponse>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   setSelectedTenantId: (tenantId: string | null) => void;
   hasPermission: () => boolean;
 }
@@ -85,6 +86,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     navigate(AUTH_ROUTES.LOGIN, { replace: true });
   };
 
+  const refreshUser = async () => {
+    const currentUser = await apiService.get<AuthUser>("/api/auth/me", {
+      showErrorToast: false,
+      showSuccessToast: false,
+    });
+    localStorage.setItem(AUTH_STORAGE_KEYS.AUTH_USER, JSON.stringify(currentUser));
+    setUser(currentUser);
+  };
+
   useEffect(() => {
     const syncSession = async () => {
       const token = apiService.getAccessToken();
@@ -96,12 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const currentUser = await apiService.get<AuthUser>("/api/auth/me", {
-          showErrorToast: false,
-          showSuccessToast: false,
-        });
-        localStorage.setItem(AUTH_STORAGE_KEYS.AUTH_USER, JSON.stringify(currentUser));
-        setUser(currentUser);
+        await refreshUser();
       } catch {
         clearStoredAuth();
         setUser(null);
@@ -194,6 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       verifyTwoFactor,
       logout,
+      refreshUser,
       setSelectedTenantId,
       hasPermission: () => !!user,
     }),

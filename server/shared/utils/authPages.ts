@@ -25,9 +25,12 @@ export const STATIC_PAGE_DEFINITIONS: StaticPageDefinition[] = [
   { title: "FAQs", slug: "faqs", icon: "HelpCircle", routePath: "/admin/faqs", sortOrder: 13, parentId: null },
   { title: "Home Settings", slug: "home-settings", icon: "Home", routePath: "/admin/home-settings", sortOrder: 14, parentId: null },
   { title: "Popup Ads", slug: "popup-ads", icon: "Megaphone", routePath: "/admin/popup-ads", sortOrder: 15, parentId: null },
+  { title: "Pages", slug: "pages", icon: "FileText", routePath: "/admin/pages", sortOrder: 16, parentId: null },
+  { title: "Roles", slug: "roles", icon: "Shield", routePath: "/admin/roles", sortOrder: 17, parentId: null },
+  { title: "Page Permissions", slug: "page-permissions", icon: "Settings", routePath: "/admin/page-permissions", sortOrder: 18, parentId: null },
 ];
 
-export const SUPER_ADMIN_ONLY_PAGE_SLUGS = ["subscription-plans", "tenants", "tenant-subscriptions"] as const;
+export const SUPER_ADMIN_ONLY_PAGE_SLUGS = ["subscription-plans", "tenants", "tenant-subscriptions", "pages"] as const;
 
 export const ADMIN_ROUTE_PAGE_MAP: Record<string, string> = {
   categories: "categories",
@@ -38,7 +41,10 @@ export const ADMIN_ROUTE_PAGE_MAP: Record<string, string> = {
   orders: "orders",
   organizations: "organizations",
   "popup-ads": "popup-ads",
+  "page-permissions": "page-permissions",
+  pages: "pages",
   products: "products",
+  roles: "roles",
   "sub-categories": "sub-categories",
   "sub-sub-categories": "sub-sub-categories",
   "subscription-plans": "subscription-plans",

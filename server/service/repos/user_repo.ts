@@ -1,5 +1,8 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "server/db";
+import { roles } from "server/db/schemas/roles";
+import { tenants } from "server/db/schemas/tenants";
+import { userRoles } from "server/db/schemas/userRoles";
 import { users } from "server/db/schemas/users";
 import { CreateUserDTO, GetUsersOptions, GetUsersResponse, UpdateUserDTO, UserResponseDTO } from "server/shared/dtos/User";
 import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
@@ -16,7 +19,12 @@ export interface IStorageUser {
   deleteUser(id: string, tenantId?: string): Promise<void>;
 }
 
-function mapUser(user: typeof users.$inferSelect): UserResponseDTO {
+function mapUser(row: {
+  users: typeof users.$inferSelect;
+  roles: typeof roles.$inferSelect | null;
+  tenants: typeof tenants.$inferSelect | null;
+}): UserResponseDTO {
+  const user = row.users;
   return {
     id: user.id,
     tenantId: user.tenantId,
@@ -24,8 +32,13 @@ function mapUser(user: typeof users.$inferSelect): UserResponseDTO {
     lastName: user.lastName,
     email: user.email,
     mobile: user.mobile,
+    tenantName: row.tenants?.name ?? null,
     isActive: user.isActive,
     twoFactorEnabled: user.twoFactorEnabled,
+    twoFactorMethod: user.twoFactorMethod,
+    roleId: row.roles?.id ?? null,
+    roleName: row.roles?.name ?? null,
+    roleDisplayName: row.roles?.displayName ?? null,
     createdBy: user.createdBy,
     updatedBy: user.updatedBy,
     createdOn: user.createdOn,
@@ -35,14 +48,7 @@ function mapUser(user: typeof users.$inferSelect): UserResponseDTO {
 }
 
 export class StorageUser implements IStorageUser {
-  // Users
-  async getUsers(tenantId: string | undefined, options?: GetUsersOptions): Promise<GetUsersResponse> {
-    const page = options?.page || PAGINATION_DEFAULTS.PAGE;
-    const pageSize = options?.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE;
-    const search = options?.search?.trim();
-    const sortBy = options?.sortBy || USER_SORT_FIELDS.CREATED_ON;
-    const sortOrder = options?.sortOrder || PAGINATION_DEFAULTS.SORT_ORDER;
-
+  private buildUserQuery(tenantId?: string, search?: string) {
     const filters = [];
     if (tenantId) {
       filters.push(eq(users.tenantId, tenantId));
@@ -54,7 +60,33 @@ export class StorageUser implements IStorageUser {
     }
 
     const whereCondition = filters.length === 0 ? undefined : filters.length === 1 ? filters[0] : and(...filters);
-    const baseQuery = whereCondition ? db.select().from(users).where(whereCondition) : db.select().from(users);
+
+    let query = db
+      .select({ users, roles, tenants })
+      .from(users)
+      .leftJoin(
+        userRoles,
+        and(eq(userRoles.userId, users.id), eq(userRoles.tenantId, users.tenantId), eq(userRoles.isActive, true))
+      )
+      .leftJoin(roles, and(eq(roles.id, userRoles.roleId), eq(roles.isActive, true)))
+      .leftJoin(tenants, eq(tenants.id, users.tenantId));
+
+    if (whereCondition) {
+      query = query.where(whereCondition) as typeof query;
+    }
+
+    return query;
+  }
+
+  // Users
+  async getUsers(tenantId: string | undefined, options?: GetUsersOptions): Promise<GetUsersResponse> {
+    const page = options?.page || PAGINATION_DEFAULTS.PAGE;
+    const pageSize = options?.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE;
+    const search = options?.search?.trim();
+    const sortBy = options?.sortBy || USER_SORT_FIELDS.CREATED_ON;
+    const sortOrder = options?.sortOrder || PAGINATION_DEFAULTS.SORT_ORDER;
+
+    const baseQuery = this.buildUserQuery(tenantId, search);
 
     const countResult = await baseQuery;
     const total = countResult.length;
@@ -74,26 +106,20 @@ export class StorageUser implements IStorageUser {
   }
 
   async getUser(id: string, tenantId?: string): Promise<UserResponseDTO | undefined> {
-    const whereCondition = tenantId
-      ? and(eq(users.id, id), eq(users.tenantId, tenantId))
-      : eq(users.id, id);
-    const [user] = await db.select().from(users).where(whereCondition);
+    const query = this.buildUserQuery(tenantId);
+    const [user] = await query.where(eq(users.id, id));
     return user ? mapUser(user) : undefined;
   }
 
   async getUserByUsername(username: string, tenantId?: string): Promise<UserResponseDTO | undefined> {
-    const whereCondition = tenantId
-      ? and(eq(users.email, username), eq(users.tenantId, tenantId))
-      : eq(users.email, username);
-    const [user] = await db.select().from(users).where(whereCondition);
+    const query = this.buildUserQuery(tenantId);
+    const [user] = await query.where(eq(users.email, username));
     return user ? mapUser(user) : undefined;
   }
 
   async getUserByEmail(email: string, tenantId?: string): Promise<UserResponseDTO | undefined> {
-    const whereCondition = tenantId
-      ? and(eq(users.email, email), eq(users.tenantId, tenantId))
-      : eq(users.email, email);
-    const [user] = await db.select().from(users).where(whereCondition);
+    const query = this.buildUserQuery(tenantId);
+    const [user] = await query.where(eq(users.email, email));
     return user ? mapUser(user) : undefined;
   }
 
@@ -106,13 +132,18 @@ export class StorageUser implements IStorageUser {
       mobile: insertUser.mobile,
       password: insertUser.password,
       isActive: insertUser.isActive ?? true,
+      twoFactorEnabled: insertUser.twoFactorEnabled ?? false,
+      twoFactorMethod: insertUser.twoFactorMethod ?? null,
+      twoFactorSecret: null,
+      emailOtpCode: null,
+      emailOtpExpiresAt: null,
       createdBy: insertUser.createdBy,
       updatedBy: insertUser.createdBy,
       createdOn: new Date(),
       updatedOn: new Date(),
       userIp: insertUser.userIp,
     }).returning();
-    return mapUser(user);
+    return (await this.getUser(user.id, insertUser.tenantId)) as UserResponseDTO;
   }
 
   async updateUser(id: string, updates: UpdateUserDTO & { tenantId: string; userIp: string; updatedBy?: string }): Promise<UserResponseDTO> {
@@ -127,13 +158,20 @@ export class StorageUser implements IStorageUser {
     if (updates.lastName) updatePayload.lastName = updates.lastName;
     if (updates.mobile) updatePayload.mobile = updates.mobile;
     if (updates.isActive !== undefined) updatePayload.isActive = updates.isActive;
+    if (updates.twoFactorEnabled !== undefined) updatePayload.twoFactorEnabled = updates.twoFactorEnabled;
+    if (updates.twoFactorMethod !== undefined) updatePayload.twoFactorMethod = updates.twoFactorMethod;
+    if (updates.twoFactorEnabled === false || updates.twoFactorMethod === null) {
+      updatePayload.twoFactorSecret = null;
+      updatePayload.emailOtpCode = null;
+      updatePayload.emailOtpExpiresAt = null;
+    }
 
-    const [user] = await db
+    await db
       .update(users)
       .set(updatePayload)
       .where(and(eq(users.id, id), eq(users.tenantId, updates.tenantId)))
       .returning();
-    return mapUser(user);
+    return (await this.getUser(id, updates.tenantId)) as UserResponseDTO;
   }
 
   async deleteUser(id: string, tenantId?: string): Promise<void> {

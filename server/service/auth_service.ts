@@ -49,7 +49,7 @@ const { authenticator } = otplib as typeof import("otplib") & {
 
 interface ResolvedRole {
   roleId: string;
-  roleName: RoleName;
+  roleName: string;
   displayName: string;
 }
 
@@ -59,9 +59,11 @@ interface PublicUser {
   firstName: string;
   lastName: string;
   email: string;
+  mobile: string;
   roleId: string;
-  roleName: RoleName;
+  roleName: string;
   twoFactorEnabled: boolean;
+  twoFactorMethod: TwoFactorMethod | null;
 }
 
 interface LoginSuccessResponse {
@@ -118,13 +120,119 @@ function toPublicUser(user: typeof users.$inferSelect, role: ResolvedRole): Publ
     firstName: user.firstName,
     lastName: user.lastName,
     email: user.email,
+    mobile: user.mobile,
     roleId: role.roleId,
     roleName: role.roleName,
     twoFactorEnabled: user.twoFactorEnabled,
+    twoFactorMethod: (user.twoFactorMethod as TwoFactorMethod | null) || null,
   };
 }
 
 export class AuthService {
+  private async syncStaticTenantAccess(): Promise<void> {
+    const assignablePageRows = await db
+      .select({ id: pages.id, slug: pages.slug })
+      .from(pages)
+      .where(eq(pages.isActive, true));
+
+    const assignablePages = assignablePageRows.filter(
+      (page) =>
+        STATIC_PAGE_DEFINITIONS.some((definition) => definition.slug === page.slug) &&
+        !SUPER_ADMIN_ONLY_PAGE_SLUGS.includes(page.slug as (typeof SUPER_ADMIN_ONLY_PAGE_SLUGS)[number])
+    );
+
+    if (assignablePages.length === 0) {
+      return;
+    }
+
+    const [tenantAdminRole] = await db
+      .select({ id: roles.id })
+      .from(roles)
+      .where(eq(roles.name, RoleName.TENANT_ADMIN))
+      .limit(1);
+
+    if (!tenantAdminRole) {
+      return;
+    }
+
+    const tenantRows = await db.select({ id: tenants.id }).from(tenants).where(eq(tenants.isActive, true));
+    if (tenantRows.length === 0) {
+      return;
+    }
+
+    const existingTenantPages = await db
+      .select({ tenantId: tenantPages.tenantId, pageId: tenantPages.pageId })
+      .from(tenantPages);
+    const tenantPageKeys = new Set(existingTenantPages.map((row) => `${row.tenantId}:${row.pageId}`));
+
+    const missingTenantPages = tenantRows.flatMap((tenant) =>
+      assignablePages
+        .filter((page) => !tenantPageKeys.has(`${tenant.id}:${page.id}`))
+        .map((page) => ({
+          tenantId: tenant.id,
+          pageId: page.id,
+          isActive: true,
+          createdOn: new Date(),
+          updatedOn: new Date(),
+        }))
+    );
+
+    if (missingTenantPages.length > 0) {
+      await db.insert(tenantPages).values(missingTenantPages);
+    }
+
+    const existingRolePages = await db
+      .select({ tenantId: tenantRolePages.tenantId, pageId: tenantRolePages.pageId })
+      .from(tenantRolePages)
+      .where(eq(tenantRolePages.roleId, tenantAdminRole.id));
+    const rolePageKeys = new Set(existingRolePages.map((row) => `${row.tenantId}:${row.pageId}`));
+
+    const missingRolePages = tenantRows.flatMap((tenant) =>
+      assignablePages
+        .filter((page) => !rolePageKeys.has(`${tenant.id}:${page.id}`))
+        .map((page) => ({
+          tenantId: tenant.id,
+          roleId: tenantAdminRole.id,
+          pageId: page.id,
+          isActive: true,
+          createdOn: new Date(),
+          updatedOn: new Date(),
+        }))
+    );
+
+    if (missingRolePages.length > 0) {
+      await db.insert(tenantRolePages).values(missingRolePages);
+    }
+
+    const existingPermissions = await db
+      .select({ tenantId: tenantRolePagePermissions.tenantId, pageId: tenantRolePagePermissions.pageId })
+      .from(tenantRolePagePermissions)
+      .where(eq(tenantRolePagePermissions.roleId, tenantAdminRole.id));
+    const permissionKeys = new Set(existingPermissions.map((row) => `${row.tenantId}:${row.pageId}`));
+
+    const missingPermissions = tenantRows.flatMap((tenant) =>
+      assignablePages
+        .filter((page) => !permissionKeys.has(`${tenant.id}:${page.id}`))
+        .map((page) => ({
+          tenantId: tenant.id,
+          roleId: tenantAdminRole.id,
+          pageId: page.id,
+          canView: true,
+          canCreate: true,
+          canUpdate: true,
+          canDelete: true,
+          canPreview: true,
+          isActive: true,
+          createdOn: new Date(),
+          updatedOn: new Date(),
+        }))
+    );
+
+    if (missingPermissions.length > 0) {
+      await db.insert(tenantRolePagePermissions).values(missingPermissions);
+    }
+  }
+
   async ensureSystemSeedData(): Promise<void> {
     const existingRoles = await db.select({ name: roles.name }).from(roles);
     const existingRoleNames = new Set(existingRoles.map((role) => role.name));
@@ -154,6 +262,26 @@ export class AuthService {
         }))
       );
     }
+
+    await this.syncStaticTenantAccess();
+  }
+
+  async resolveRoleById(roleId: string): Promise<ResolvedRole> {
+    const [role] = await db
+      .select({
+        roleId: roles.id,
+        roleName: roles.name,
+        displayName: roles.displayName,
+      })
+      .from(roles)
+      .where(and(eq(roles.id, roleId), eq(roles.isActive, true)))
+      .limit(1);
+
+    if (!role) {
+      throw new Error(`Role not found: ${roleId}`);
+    }
+
+    return role as ResolvedRole;
   }
 
   async getSystemStatus(): Promise<SystemStatusResponseDTO> {
@@ -272,6 +400,51 @@ export class AuthService {
     await db.insert(userRoles).values({
       userId,
       roleId: role.id,
+      tenantId,
+      isActive: true,
+      createdBy,
+      updatedBy: createdBy,
+      createdOn: new Date(),
+      updatedOn: new Date(),
+      userIp,
+    });
+  }
+
+  async ensureUserRoleAssignmentByRoleId(
+    userId: string,
+    tenantId: string,
+    roleId: string,
+    createdBy?: string,
+    userIp?: string
+  ): Promise<void> {
+    const [role] = await db.select().from(roles).where(and(eq(roles.id, roleId), eq(roles.isActive, true))).limit(1);
+    if (!role) {
+      throw new Error(`Role not found: ${roleId}`);
+    }
+
+    const [existing] = await db
+      .select()
+      .from(userRoles)
+      .where(and(eq(userRoles.userId, userId), eq(userRoles.tenantId, tenantId)))
+      .limit(1);
+
+    if (existing) {
+      await db
+        .update(userRoles)
+        .set({
+          roleId,
+          isActive: true,
+          updatedBy: createdBy,
+          updatedOn: new Date(),
+          userIp,
+        })
+        .where(eq(userRoles.id, existing.id));
+      return;
+    }
+
+    await db.insert(userRoles).values({
+      userId,
+      roleId,
       tenantId,
       isActive: true,
       createdBy,

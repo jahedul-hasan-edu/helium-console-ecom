@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Search, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateUser, useUsers, useCreateUser, useDeleteUser, useGetUser } from "@/hooks/use-User";
@@ -11,8 +13,11 @@ import { PaginatedDataTable } from "@/components/PaginatedDataTable";
 import { ActionButtons } from "@/components/ActionButtons";
 import { COLUMNS, USERS_PAGE, BUTTON_LABELS, ERROR_MESSAGES, ACTION_BUTTONS, SORTABLE_FIELDS, SORT_CONFIG, type SortField, type SortOrder, TOTAL_PAGES } from "@/pages/user";
 import type { User } from "@/models/User";
+import type { Column } from "@/components/PaginatedDataTable";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Users() {
+  const { isSuperAdmin, selectedTenantId } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(USERS_PAGE.CURRENT_PAGE);
   const [pageSize, setPageSize] = useState(USERS_PAGE.PAGE_SIZE_LENGTH);
@@ -38,6 +43,43 @@ export default function Users() {
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
   const { toast } = useToast();
+
+  const columns = useMemo<Column<User>[]>(() => {
+    const nextColumns: Column<User>[] = [
+      ...COLUMNS.map((column) => ({
+        ...column,
+        render:
+          column.key === "roleDisplayName"
+            ? (_value: unknown, item: User) => item.roleDisplayName || item.roleName?.replace(/_/g, " ") || "Not assigned"
+            : column.render,
+      })),
+      {
+        key: "twoFactorMethod",
+        label: "2FA",
+        render: (_value: unknown, item: User) => {
+          if (!item.twoFactorMethod) {
+            return <Badge variant="secondary">Disabled</Badge>;
+          }
+
+          const label = item.twoFactorMethod === "email"
+            ? item.twoFactorEnabled ? "Email OTP" : "Email pending"
+            : item.twoFactorEnabled ? "Authenticator" : "App pending";
+
+          return <Badge variant={item.twoFactorEnabled ? "default" : "outline"}>{label}</Badge>;
+        },
+      },
+    ];
+
+    if (isSuperAdmin) {
+      nextColumns.splice(0, 0, {
+        key: "tenantName",
+        label: "Tenant",
+        render: (_value: unknown, item: User) => item.tenantName || item.tenantId,
+      });
+    }
+
+    return nextColumns;
+  }, [isSuperAdmin]);
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -124,11 +166,20 @@ export default function Users() {
           <h1 className="text-3xl font-bold tracking-tight">{USERS_PAGE.TITLE}</h1>
           <p className="text-muted-foreground mt-1">{USERS_PAGE.SUBTITLE}</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+        <Button onClick={() => setShowCreateModal(true)} className="gap-2" disabled={isSuperAdmin && !selectedTenantId}>
           <Plus className="h-4 w-4" />
           {BUTTON_LABELS.ADD_USER}
         </Button>
       </div>
+
+      {isSuperAdmin && !selectedTenantId && (
+        <Alert>
+          <AlertTitle>Select a tenant to create users</AlertTitle>
+          <AlertDescription>
+            Super admins can review all users, but creating new users requires a tenant context so roles and permissions stay scoped correctly.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Search */}
       <div className="flex items-center gap-2 max-w-sm">
@@ -145,7 +196,7 @@ export default function Users() {
 
       {/* Table with Pagination */}
       <PaginatedDataTable
-        columns={COLUMNS}
+        columns={columns}
         data={usersData?.items}
         isLoading={isLoading}
         sortBy={sortBy}
@@ -170,6 +221,7 @@ export default function Users() {
         onClose={() => setShowCreateModal(false)}
         onSubmit={handleCreate}
         isLoading={createUserMutation.isPending}
+        tenantId={selectedTenantId}
       />
 
       <EditUserModal
@@ -181,6 +233,7 @@ export default function Users() {
         user={selectedUser}
         onSubmit={handleUpdate}
         isLoading={updateUserMutation.isPending}
+        tenantId={selectedUser?.tenantId || selectedTenantId}
       />
 
       <DeleteUserModal

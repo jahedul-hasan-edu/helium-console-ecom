@@ -1,6 +1,12 @@
+import { and, eq, or } from "drizzle-orm";
+import { db } from "server/db";
+import { roles } from "server/db/schemas/roles";
+import { tenantRolePagePermissions } from "server/db/schemas/tenantRolePagePermissions";
+import { tenantRolePages } from "server/db/schemas/tenantRolePages";
+import { userRoles } from "server/db/schemas/userRoles";
 import { storageUser } from "./repos/user_repo";
 import { CreateUserDTO, GetUsersOptions, GetUsersResponse, UpdateUserDTO, UserResponseDTO } from "server/shared/dtos/User";
-import { RoleName } from "server/shared/constants/enums";
+import { RoleName, TwoFactorMethod } from "server/shared/constants/enums";
 import { PasswordUtil } from "server/shared/utils/passwordUtil";
 import { Request } from "express";
 import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
@@ -13,6 +19,99 @@ import { authService } from "./auth_service";
  * Acts as a bridge between controller and repository
  */
 export class UserService {
+  private async resolveAllowedRoleId(
+    tenantId: string,
+    requesterRole: string | undefined,
+    requestedRoleId?: string,
+    requestedRoleName?: RoleName,
+  ): Promise<string> {
+    const allowedSystemRoles = requesterRole === RoleName.SUPER_ADMIN
+      ? [RoleName.TENANT_ADMIN, RoleName.USER]
+      : [RoleName.TENANT_ADMIN, RoleName.USER];
+
+    if (requestedRoleId) {
+      const [role] = await db
+        .select({ id: roles.id, name: roles.name })
+        .from(roles)
+        .where(and(eq(roles.id, requestedRoleId), eq(roles.isActive, true)))
+        .limit(1);
+
+      if (!role || role.name === RoleName.SUPER_ADMIN) {
+        throw new Error("Selected role is not available");
+      }
+
+      if (allowedSystemRoles.includes(role.name as RoleName)) {
+        return role.id;
+      }
+
+      const [tenantLinkedRole] = await db
+        .select({ id: roles.id })
+        .from(roles)
+        .leftJoin(
+          tenantRolePages,
+          and(eq(tenantRolePages.roleId, roles.id), eq(tenantRolePages.tenantId, tenantId))
+        )
+        .leftJoin(
+          tenantRolePagePermissions,
+          and(eq(tenantRolePagePermissions.roleId, roles.id), eq(tenantRolePagePermissions.tenantId, tenantId))
+        )
+        .leftJoin(
+          userRoles,
+          and(eq(userRoles.roleId, roles.id), eq(userRoles.tenantId, tenantId), eq(userRoles.isActive, true))
+        )
+        .where(
+          and(
+            eq(roles.id, requestedRoleId),
+            eq(roles.isActive, true),
+            or(
+              eq(tenantRolePages.tenantId, tenantId),
+              eq(tenantRolePagePermissions.tenantId, tenantId),
+              eq(userRoles.tenantId, tenantId)
+            )
+          )
+        )
+        .limit(1);
+
+      if (!tenantLinkedRole) {
+        throw new Error("Selected role is not available for this tenant");
+      }
+
+      return requestedRoleId;
+    }
+
+    const fallbackRoleName = requesterRole === RoleName.TENANT_ADMIN ? RoleName.USER : requestedRoleName || RoleName.USER;
+    const [role] = await db
+      .select({ id: roles.id })
+      .from(roles)
+      .where(and(eq(roles.name, fallbackRoleName), eq(roles.isActive, true)))
+      .limit(1);
+
+    if (!role) {
+      throw new Error("Selected role is not available");
+    }
+
+    return role.id;
+  }
+
+  private normalizeTwoFactorSettings(input: { twoFactorEnabled?: boolean; twoFactorMethod?: TwoFactorMethod | null }) {
+    if (input.twoFactorMethod === null) {
+      return { twoFactorEnabled: false, twoFactorMethod: null };
+    }
+
+    if (input.twoFactorMethod === TwoFactorMethod.EMAIL) {
+      return { twoFactorEnabled: true, twoFactorMethod: TwoFactorMethod.EMAIL };
+    }
+
+    if (input.twoFactorMethod === TwoFactorMethod.APP) {
+      return { twoFactorEnabled: false, twoFactorMethod: TwoFactorMethod.APP };
+    }
+
+    return {
+      twoFactorEnabled: input.twoFactorEnabled ?? false,
+      twoFactorMethod: input.twoFactorEnabled ? TwoFactorMethod.EMAIL : null,
+    };
+  }
+
   /**
    * Get users with pagination, sorting, and searching
    */
@@ -72,7 +171,11 @@ export class UserService {
       throw new Error("Tenant context is required to create a user");
     }
 
-    const requestedRoleName = requesterRole === RoleName.TENANT_ADMIN ? RoleName.USER : user.roleName || RoleName.USER;
+    const requestedRoleId = await this.resolveAllowedRoleId(tenantId, requesterRole, user.roleId, user.roleName);
+    const twoFactorSettings = this.normalizeTwoFactorSettings({
+      twoFactorEnabled: user.twoFactorEnabled,
+      twoFactorMethod: user.twoFactorMethod,
+    });
 
     const hashedPassword = PasswordUtil.hashPassword(user.password);
 
@@ -80,19 +183,20 @@ export class UserService {
       ...user,
       tenantId,
       password: hashedPassword,
+      ...twoFactorSettings,
       userIp,
       createdBy: authenticatedRequest.user?.userId,
     });
 
-    await authService.ensureUserRoleAssignment(
+    await authService.ensureUserRoleAssignmentByRoleId(
       createdUser.id,
       tenantId,
-      requestedRoleName,
+      requestedRoleId,
       authenticatedRequest.user?.userId,
       userIp
     );
 
-    return { ...createdUser, roleName: requestedRoleName };
+    return (await storageUser.getUser(createdUser.id, tenantId)) as UserResponseDTO;
   }
 
   /**
@@ -106,22 +210,29 @@ export class UserService {
       throw new Error("Tenant context is required to update a user");
     }
 
+    const twoFactorSettings = this.normalizeTwoFactorSettings({
+      twoFactorEnabled: updates.twoFactorEnabled,
+      twoFactorMethod: updates.twoFactorMethod,
+    });
+
     const updatedUser = await storageUser.updateUser(id, {
       ...updates,
+      ...(updates.twoFactorEnabled !== undefined || updates.twoFactorMethod !== undefined ? twoFactorSettings : {}),
       tenantId,
       userIp,
       updatedBy: authenticatedRequest.user?.userId,
     });
 
-    if (updates.roleName) {
-      await authService.ensureUserRoleAssignment(
+    if (updates.roleId || updates.roleName) {
+      const requestedRoleId = await this.resolveAllowedRoleId(tenantId, authenticatedRequest.user?.roleName, updates.roleId, updates.roleName);
+      await authService.ensureUserRoleAssignmentByRoleId(
         id,
         tenantId,
-        authenticatedRequest.user?.roleName === RoleName.TENANT_ADMIN ? RoleName.USER : updates.roleName,
+        requestedRoleId,
         authenticatedRequest.user?.userId,
         userIp
       );
-      return { ...updatedUser, roleName: updates.roleName };
+      return (await storageUser.getUser(id, tenantId)) as UserResponseDTO;
     }
 
     return updatedUser;

@@ -42,6 +42,10 @@ export class FormValidator {
       errors.push({ field: "confirmPassword", message: "Passwords do not match" });
     }
 
+    if (!data.roleId?.trim()) {
+      errors.push({ field: "roleId", message: "Select a role" });
+    }
+
     return {
       isValid: errors.length === 0,
       errors,
@@ -66,6 +70,10 @@ export class FormValidator {
       errors.push({ field: "mobile", message: "Mobile is required" });
     } else if (!this.isValidMobile(data.mobile)) {
       errors.push({ field: "mobile", message: "Please enter a valid mobile number" });
+    }
+
+    if (!data.roleId?.trim()) {
+      errors.push({ field: "roleId", message: "Select a role" });
     }
 
     return {

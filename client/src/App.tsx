@@ -21,10 +21,14 @@ import Faqs from "./pages/faq/Faqs";
 import HomeSettings from "./pages/homeSetting/HomeSettings";
 import Organizations from "./pages/organization/Organizations";
 import PopupAds from "./pages/popupAd/PopupAds";
+import Pages from "@/pages/page/Pages";
+import PagePermissions from "@/pages/pagePermission/PagePermissions";
+import Roles from "@/pages/role/Roles";
 import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
 import TwoFactorVerify from "@/pages/auth/TwoFactorVerify";
 import { AUTH_ROUTES } from "@/lib/auth";
+import MyAccount from "@/pages/account/MyAccount";
 
 function RootRedirect() {
   const { isAuthenticated, isInitializing } = useAuth();
@@ -88,6 +92,18 @@ function Router() {
       </Route>
       <Route path="/admin/popup-ads">
         <AuthShell><PopupAds /></AuthShell>
+      </Route>
+      <Route path="/admin/pages">
+        <AuthShell><Pages /></AuthShell>
+      </Route>
+      <Route path="/admin/roles">
+        <AuthShell><Roles /></AuthShell>
+      </Route>
+      <Route path="/admin/page-permissions">
+        <AuthShell><PagePermissions /></AuthShell>
+      </Route>
+      <Route path="/admin/my-account">
+        <AuthShell><MyAccount /></AuthShell>
       </Route>
 
       <Route component={NotFound} />

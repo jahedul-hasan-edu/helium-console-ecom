@@ -9,7 +9,6 @@ import {
   Building2,
   Tag, 
   Menu,
-  Bell,
   Search,
   LogOut,
   Tags,
@@ -56,7 +55,6 @@ import {
 } from "@/components/ui/select";
 
 const iconMap: Record<string, LucideIcon> = {
-  Bell,
   Briefcase,
   Building,
   Building2,
@@ -86,7 +84,7 @@ function flattenNavigation(items: NavigationItem[]): NavigationItem[] {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { data: navigation = [] } = useNavigation(true);
   const { user, logout, isSuperAdmin, selectedTenantId, setSelectedTenantId } = useAuth();
@@ -189,10 +187,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Select>
               </div>
             )}
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="w-5 h-5 text-muted-foreground" />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-card"></span>
-            </Button>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -212,8 +206,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/admin/my-account")}>Account &amp; Security</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive" onClick={() => void logout()}>
                   <LogOut className="w-4 h-4 mr-2" />

@@ -15,6 +15,9 @@ import { registerTenantSubscriptionRoutes } from "./api/controllers/tenantSubscr
 import { registerFaqRoutes } from "./api/controllers/faqs";
 import { registerHomeSettingRoutes } from "./api/controllers/homeSettings";
 import { registerPopupAdRoutes } from "./api/controllers/popupAds";
+import { registerPageRoutes } from "./api/controllers/pages";
+import { registerPagePermissionRoutes } from "./api/controllers/pagePermissions";
+import { registerRoleRoutes } from "./api/controllers/roles";
 import { registerNavigationRoutes } from "./api/controllers/navigation";
 import { authMiddleware } from "./shared/middleware/authMiddleware";
 import { authorizationMiddleware } from "./shared/middleware/authorizationMiddleware";
@@ -41,6 +44,9 @@ export async function registerRoutes(
   await registerFaqRoutes(app);
   await registerHomeSettingRoutes(app);
   await registerPopupAdRoutes(app);
+  await registerPageRoutes(app);
+  await registerRoleRoutes(app);
+  await registerPagePermissionRoutes(app);
   await registerNavigationRoutes(app);
 
   return httpServer;

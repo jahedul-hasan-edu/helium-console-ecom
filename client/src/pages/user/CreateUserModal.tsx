@@ -13,12 +13,17 @@ import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { getFieldError, ValidationError } from "@/lib/formValidator";
 import { useCheckEmail } from "@/hooks/use-User";
 import { FormValidator } from "./formValidator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useRoles } from "@/hooks/use-Role";
+
+type TwoFactorMode = "disabled" | "email" | "app";
 
 interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => Promise<void>;
   isLoading: boolean;
+  tenantId?: string | null;
 }
 
 export function CreateUserModal({
@@ -26,6 +31,7 @@ export function CreateUserModal({
   onClose,
   onSubmit,
   isLoading,
+  tenantId,
 }: CreateUserModalProps) {
   const [formData, setFormData] = useState({
     firstName: "",
@@ -34,6 +40,8 @@ export function CreateUserModal({
     mobile: "",
     password: "",
     confirmPassword: "",
+    roleId: "",
+    twoFactorMode: "disabled" as TwoFactorMode,
   });
 
   const [errors, setErrors] = useState<ValidationError[]>([]);
@@ -43,6 +51,7 @@ export function CreateUserModal({
     formData.email,
     isOpen && !!formData.email
   );
+  const { data: roles = [] } = useRoles(tenantId, isOpen && !!tenantId);
 
   const isDuplicateEmail = emailCheckResult?.exists ?? false;
 
@@ -75,7 +84,14 @@ export function CreateUserModal({
     try {
       // Submit without confirmPassword
       const { confirmPassword, ...submitData } = formData;
-      await onSubmit(submitData);
+      await onSubmit({
+        ...submitData,
+        tenantId,
+        twoFactorMethod:
+          formData.twoFactorMode === "disabled"
+            ? null
+            : formData.twoFactorMode,
+      });
 
       // Reset form on success
       setFormData({
@@ -85,6 +101,8 @@ export function CreateUserModal({
         mobile: "",
         password: "",
         confirmPassword: "",
+        roleId: "",
+        twoFactorMode: "disabled",
       });
       setErrors([]);
     } catch (error) {
@@ -218,6 +236,42 @@ export function CreateUserModal({
           </div>
 
           <div className="space-y-2">
+            <Label>
+              Role <span className="text-destructive">*</span>
+            </Label>
+            <Select value={formData.roleId} onValueChange={(value) => setFormData((prev) => ({ ...prev, roleId: value }))}>
+              <SelectTrigger className={getFieldError("roleId", errors) ? "border-destructive" : ""}>
+                <SelectValue placeholder={tenantId ? "Select role" : "Select a tenant first"} />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.map((role) => (
+                  <SelectItem key={role.id} value={role.id}>{role.displayName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {getFieldError("roleId", errors) && (
+              <div className="flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="h-3 w-3" />
+                {getFieldError("roleId", errors)}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>2FA Configuration</Label>
+            <Select value={formData.twoFactorMode} onValueChange={(value: TwoFactorMode) => setFormData((prev) => ({ ...prev, twoFactorMode: value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select 2FA mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="disabled">Disabled</SelectItem>
+                <SelectItem value="email">Email OTP required</SelectItem>
+                <SelectItem value="app">Authenticator app setup pending</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="password">
               Password <span className="text-destructive">*</span>
             </Label>
@@ -265,7 +319,7 @@ export function CreateUserModal({
             </Button>
             <Button 
               type="submit" 
-              disabled={isLoading || isDuplicateEmail || isCheckingEmail}
+              disabled={isLoading || isDuplicateEmail || isCheckingEmail || !tenantId}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create User

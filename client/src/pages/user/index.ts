@@ -38,6 +38,9 @@ export const USER_COLUMNS_LABEL = {
   LAST_NAME: "Last Name",
   EMAIL: "Email",
   MOBILE: "Mobile",
+  ROLE: "Role",
+  TENANT: "Tenant",
+  TWO_FACTOR: "2FA",
 };
 
 // Sortable fields
@@ -82,6 +85,10 @@ export const COLUMNS: Column<User>[] = [
     {
       key: "mobile",
       label: USER_COLUMNS_LABEL.MOBILE,
+    },
+    {
+      key: "roleDisplayName",
+      label: USER_COLUMNS_LABEL.ROLE,
     },
   ];
 

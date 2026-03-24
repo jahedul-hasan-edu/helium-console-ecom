@@ -1,4 +1,4 @@
-import type { ClientRoleName, RegistrationMode } from "@/lib/auth";
+import type { RegistrationMode } from "@/lib/auth";
 
 export interface AuthUser {
   id: string;
@@ -6,9 +6,11 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   email: string;
+  mobile: string;
   roleId: string;
-  roleName: ClientRoleName;
+  roleName: string;
   twoFactorEnabled: boolean;
+  twoFactorMethod: string | null;
 }
 
 export interface AuthSuccessResponse {

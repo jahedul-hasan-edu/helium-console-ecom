@@ -1,12 +1,11 @@
 import jwt, { type SignOptions } from "jsonwebtoken";
-import type { RoleName } from "server/shared/constants/enums";
 
 export interface AccessTokenPayload {
   userId: string;
   id: string;
   tenantId: string;
   roleId: string;
-  roleName: RoleName;
+  roleName: string;
   sessionId: string;
   subscriptionExpiresAt?: string;
 }
