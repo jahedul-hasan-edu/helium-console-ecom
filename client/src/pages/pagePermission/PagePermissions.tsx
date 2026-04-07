@@ -1,76 +1,223 @@
 import { useEffect, useMemo, useState } from "react";
-import { Save, ShieldAlert } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Edit, Plus, Save } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePagePermissions, useUpdatePagePermissions } from "@/hooks/use-PagePermission";
-import { useRoles } from "@/hooks/use-Role";
+import { useCreateRole, useRoles, useUpdateRole } from "@/hooks/use-Role";
+import type { CreateRoleRequest } from "@/models/Role";
 import type { PagePermissionEntry } from "@/models/PagePermission";
+
+const emptyRoleForm: CreateRoleRequest = {
+  displayName: "",
+  description: "",
+  isActive: true,
+};
+
+const permissionKeys = ["canView", "canCreate", "canUpdate", "canDelete", "canPreview"] as const;
+
+function isEntryFullySelected(entry: PagePermissionEntry) {
+  return entry.enabled && permissionKeys.every((permissionKey) => entry[permissionKey]);
+}
 
 export default function PagePermissions() {
   const { isSuperAdmin, selectedTenantId } = useAuth();
   const tenantScoped = !isSuperAdmin || !!selectedTenantId;
   const { data: roles = [], isLoading: rolesLoading } = useRoles(selectedTenantId, tenantScoped);
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
-  const { data, isLoading } = usePagePermissions(selectedRoleId, tenantScoped && !!selectedRoleId);
+  const [preferredRoleId, setPreferredRoleId] = useState<string | null>(null);
+  const { data, isLoading } = usePagePermissions(selectedRoleId, selectedTenantId, tenantScoped && !!selectedRoleId);
   const [entries, setEntries] = useState<PagePermissionEntry[]>([]);
-  const updateMutation = useUpdatePagePermissions(selectedRoleId);
+  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [roleForm, setRoleForm] = useState<CreateRoleRequest>(emptyRoleForm);
+  const createRoleMutation = useCreateRole();
+  const updateRoleMutation = useUpdateRole();
+  const updateMutation = useUpdatePagePermissions(selectedRoleId, selectedTenantId);
 
   useEffect(() => {
-    if (!selectedRoleId && roles.length > 0) {
-      setSelectedRoleId(roles[0].id);
+    if (roles.length === 0) {
+      if (selectedRoleId !== null) {
+        setSelectedRoleId(null);
+      }
+      if (preferredRoleId !== null) {
+        setPreferredRoleId(null);
+      }
+      return;
     }
-  }, [roles, selectedRoleId]);
+
+    if (preferredRoleId && roles.some((role) => role.id === preferredRoleId)) {
+      if (selectedRoleId !== preferredRoleId) {
+        setSelectedRoleId(preferredRoleId);
+      }
+      setPreferredRoleId(null);
+      return;
+    }
+
+    if (selectedRoleId && roles.some((role) => role.id === selectedRoleId)) {
+      return;
+    }
+
+    const defaultRole = roles.find((role) => !role.isSystem) ?? roles[0];
+    if (defaultRole && selectedRoleId !== defaultRole.id) {
+      setSelectedRoleId(defaultRole.id);
+    }
+  }, [preferredRoleId, roles, selectedRoleId]);
 
   useEffect(() => {
     setEntries(data?.pages || []);
   }, [data]);
 
+  const selectedRole = useMemo(
+    () => roles.find((role) => role.id === selectedRoleId) || null,
+    [roles, selectedRoleId]
+  );
   const isTenantAdminRole = data?.role.name === "tenant_admin";
+  const canEditSelectedRole = !!selectedRole && !selectedRole.isSystem;
+  const isRoleMutationPending = createRoleMutation.isPending || updateRoleMutation.isPending;
   const dirty = useMemo(() => JSON.stringify(entries) !== JSON.stringify(data?.pages || []), [data?.pages, entries]);
+  const selectableEntries = useMemo(() => entries.filter((entry) => entry.isActive), [entries]);
+  const allEnabledSelected = selectableEntries.length > 0 && selectableEntries.every((entry) => entry.enabled);
+  const allPermissionsSelected = selectableEntries.length > 0 && selectableEntries.every(isEntryFullySelected);
+
+  const getColumnCheckedState = (permissionKey: typeof permissionKeys[number]) =>
+    selectableEntries.length > 0 && selectableEntries.every((entry) => entry.enabled && entry[permissionKey]);
+
+  const applyEntryUpdates = (entry: PagePermissionEntry, updates: Partial<PagePermissionEntry>): PagePermissionEntry => {
+    const next = { ...entry, ...updates };
+
+    if (!entry.isActive) {
+      return {
+        ...next,
+        enabled: false,
+        canView: false,
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
+        canPreview: false,
+      };
+    }
+
+    if (!next.enabled) {
+      return {
+        ...next,
+        canView: false,
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
+        canPreview: false,
+      };
+    }
+
+    if (!isTenantAdminRole && (next.canCreate || next.canUpdate || next.canDelete || next.canPreview)) {
+      next.canView = true;
+    }
+
+    if (isTenantAdminRole) {
+      return {
+        ...next,
+        canView: next.enabled,
+        canCreate: next.enabled,
+        canUpdate: next.enabled,
+        canDelete: next.enabled,
+        canPreview: next.enabled,
+      };
+    }
+
+    return next;
+  };
+
+  const openCreateRoleDialog = () => {
+    setEditingRoleId(null);
+    setRoleForm(emptyRoleForm);
+    setIsRoleDialogOpen(true);
+  };
+
+  const openEditRoleDialog = () => {
+    if (!selectedRole || selectedRole.isSystem) {
+      return;
+    }
+
+    setEditingRoleId(selectedRole.id);
+    setRoleForm({
+      displayName: selectedRole.displayName,
+      description: selectedRole.description || "",
+      isActive: selectedRole.isActive,
+    });
+    setIsRoleDialogOpen(true);
+  };
+
+  const closeRoleDialog = () => {
+    setIsRoleDialogOpen(false);
+    setEditingRoleId(null);
+    setRoleForm(emptyRoleForm);
+  };
 
   const updateEntry = (pageId: string, updates: Partial<PagePermissionEntry>) => {
     setEntries((current) =>
+      current.map((entry) => (entry.id === pageId ? applyEntryUpdates(entry, updates) : entry))
+    );
+  };
+
+  const updateAllEntries = (updates: Partial<PagePermissionEntry>) => {
+    setEntries((current) => current.map((entry) => applyEntryUpdates(entry, updates)));
+  };
+
+  const updatePermissionColumn = (permissionKey: typeof permissionKeys[number], checked: boolean) => {
+    setEntries((current) =>
       current.map((entry) => {
-        if (entry.id !== pageId) {
+        if (!entry.isActive || isTenantAdminRole) {
           return entry;
         }
 
-        const next = { ...entry, ...updates };
-        if (!next.enabled) {
-          return {
-            ...next,
-            canView: false,
-            canCreate: false,
-            canUpdate: false,
-            canDelete: false,
-            canPreview: false,
-          };
-        }
-
-        if (!isTenantAdminRole && (next.canCreate || next.canUpdate || next.canDelete || next.canPreview)) {
-          next.canView = true;
-        }
-
-        if (isTenantAdminRole) {
-          return {
-            ...next,
-            canView: next.enabled,
-            canCreate: next.enabled,
-            canUpdate: next.enabled,
-            canDelete: next.enabled,
-            canPreview: next.enabled,
-          };
-        }
-
-        return next;
+        return applyEntryUpdates(entry, {
+          enabled: checked ? true : entry.enabled,
+          [permissionKey]: checked,
+        } as Partial<PagePermissionEntry>);
       })
     );
+  };
+
+  const updateEntryAllPermissions = (pageId: string, checked: boolean) => {
+    updateEntry(pageId, {
+      enabled: checked,
+      canView: checked,
+      canCreate: checked,
+      canUpdate: checked,
+      canDelete: checked,
+      canPreview: checked,
+    });
+  };
+
+  const handleRoleSubmit = async () => {
+    const payload = {
+      displayName: roleForm.displayName.trim(),
+      description: roleForm.description?.trim() || "",
+      isActive: !!roleForm.isActive,
+    };
+
+    if (!payload.displayName) {
+      return;
+    }
+
+    const savedRole = editingRoleId
+      ? await updateRoleMutation.mutateAsync({ id: editingRoleId, ...payload })
+      : await createRoleMutation.mutateAsync(payload);
+
+    setPreferredRoleId(savedRole.id);
+    setSelectedRoleId(savedRole.id);
+
+    closeRoleDialog();
   };
 
   const handleSave = async () => {
@@ -78,7 +225,7 @@ export default function PagePermissions() {
       return;
     }
 
-    await updateMutation.mutateAsync({
+    const response = await updateMutation.mutateAsync({
       entries: entries.map((entry) => ({
         pageId: entry.id,
         enabled: entry.enabled,
@@ -89,6 +236,8 @@ export default function PagePermissions() {
         canPreview: entry.canPreview,
       })),
     });
+
+    setEntries(response.pages);
   };
 
   if (!tenantScoped) {
@@ -107,13 +256,10 @@ export default function PagePermissions() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Page Permissions</h1>
-          <p className="mt-1 text-muted-foreground">
-            Choose a role, then decide which pages it can reach and which actions it can perform.
-          </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={selectedRoleId || undefined} onValueChange={setSelectedRoleId}>
-            <SelectTrigger className="w-[260px]">
+            <SelectTrigger className="w-[240px]">
               <SelectValue placeholder={rolesLoading ? "Loading roles..." : "Select a role"} />
             </SelectTrigger>
             <SelectContent>
@@ -122,6 +268,31 @@ export default function PagePermissions() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            size="icon"
+            variant="outline"
+            disabled={!canEditSelectedRole || isRoleMutationPending}
+            onClick={openEditRoleDialog}
+            aria-label="Edit selected role"
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={openCreateRoleDialog}
+            disabled={isRoleMutationPending}
+            aria-label="Create role"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            disabled={entries.length === 0 || updateMutation.isPending}
+            onClick={() => updateAllEntries({ enabled: true, canView: true, canCreate: true, canUpdate: true, canDelete: true, canPreview: true })}
+          >
+            Permission All
+          </Button>
           <Button className="gap-2" disabled={!dirty || updateMutation.isPending || !selectedRoleId} onClick={() => void handleSave()}>
             <Save className="h-4 w-4" />
             Save Changes
@@ -129,46 +300,65 @@ export default function PagePermissions() {
         </div>
       </div>
 
-      {data?.role && (
-        <Alert>
-          <ShieldAlert className="h-4 w-4" />
-          <AlertTitle>{data.role.displayName}</AlertTitle>
-          <AlertDescription>
-            {isTenantAdminRole
-              ? "Tenant Admin access is page-level only. Enabling a page here makes it available in the tenant admin navigation."
-              : "Regular and custom roles use the full permission matrix below."}
-          </AlertDescription>
-        </Alert>
-      )}
-
       <Card>
         <CardHeader>
           <CardTitle>Permission Matrix</CardTitle>
-          <CardDescription>
-            Enable a page first, then fine-tune the actions for that role.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Page</TableHead>
-                <TableHead>Enable</TableHead>
-                <TableHead>View</TableHead>
-                <TableHead>Create</TableHead>
-                <TableHead>Update</TableHead>
-                <TableHead>Delete</TableHead>
-                <TableHead>Preview</TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
+                    <span>All</span>
+                    <Checkbox
+                      checked={allPermissionsSelected}
+                      disabled={selectableEntries.length === 0 || updateMutation.isPending}
+                      onCheckedChange={(checked) => updateAllEntries({ enabled: checked === true, canView: checked === true, canCreate: checked === true, canUpdate: checked === true, canDelete: checked === true, canPreview: checked === true })}
+                    />
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
+                    <span>Enable</span>
+                    <Checkbox
+                      checked={allEnabledSelected}
+                      disabled={selectableEntries.length === 0 || updateMutation.isPending}
+                      onCheckedChange={(checked) => updateAllEntries({ enabled: checked === true })}
+                    />
+                  </div>
+                </TableHead>
+                {permissionKeys.map((permissionKey) => (
+                  <TableHead key={permissionKey}>
+                    <div className="flex items-center gap-2">
+                      <span>{permissionKey.replace(/^can/, "")}</span>
+                      <Checkbox
+                        checked={getColumnCheckedState(permissionKey)}
+                        disabled={selectableEntries.length === 0 || isTenantAdminRole || updateMutation.isPending}
+                        onCheckedChange={(checked) => updatePermissionColumn(permissionKey, checked === true)}
+                      />
+                    </div>
+                  </TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-muted-foreground">Loading page permissions...</TableCell>
+                  <TableCell colSpan={8} className="text-muted-foreground">Loading page permissions...</TableCell>
+                </TableRow>
+              ) : roles.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-muted-foreground">No roles found for this tenant.</TableCell>
+                </TableRow>
+              ) : !selectedRoleId ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-muted-foreground">Select a role to manage permissions.</TableCell>
                 </TableRow>
               ) : entries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-muted-foreground">Select a role to manage permissions.</TableCell>
+                  <TableCell colSpan={8} className="text-muted-foreground">No pages available.</TableCell>
                 </TableRow>
               ) : (
                 entries.map((entry) => (
@@ -184,13 +374,20 @@ export default function PagePermissions() {
                       </div>
                     </TableCell>
                     <TableCell>
+                      <Checkbox
+                        checked={isEntryFullySelected(entry)}
+                        disabled={!entry.isActive || updateMutation.isPending}
+                        onCheckedChange={(checked) => updateEntryAllPermissions(entry.id, checked === true)}
+                      />
+                    </TableCell>
+                    <TableCell>
                       <Checkbox checked={entry.enabled} disabled={!entry.isActive} onCheckedChange={(checked) => updateEntry(entry.id, { enabled: checked === true })} />
                     </TableCell>
-                    {(["canView", "canCreate", "canUpdate", "canDelete", "canPreview"] as const).map((permissionKey) => (
+                    {permissionKeys.map((permissionKey) => (
                       <TableCell key={permissionKey}>
                         <Checkbox
                           checked={entry[permissionKey]}
-                          disabled={!entry.enabled || isTenantAdminRole}
+                          disabled={!entry.enabled || isTenantAdminRole || updateMutation.isPending}
                           onCheckedChange={(checked) => updateEntry(entry.id, { [permissionKey]: checked === true } as Partial<PagePermissionEntry>)}
                         />
                       </TableCell>
@@ -202,6 +399,57 @@ export default function PagePermissions() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingRoleId ? "Edit Role" : "Create Role"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="role-display-name">Display Name</Label>
+              <Input
+                id="role-display-name"
+                value={roleForm.displayName}
+                onChange={(event) => setRoleForm((current) => ({ ...current, displayName: event.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role-description">Description</Label>
+              <Textarea
+                id="role-description"
+                rows={4}
+                value={roleForm.description || ""}
+                onChange={(event) => setRoleForm((current) => ({ ...current, description: event.target.value }))}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">Active</p>
+              </div>
+              <Switch
+                checked={!!roleForm.isActive}
+                onCheckedChange={(checked) => setRoleForm((current) => ({ ...current, isActive: checked }))}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={closeRoleDialog}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void handleRoleSubmit()}
+              disabled={isRoleMutationPending || !roleForm.displayName.trim()}
+            >
+              {editingRoleId ? "Save Role" : "Create Role"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
