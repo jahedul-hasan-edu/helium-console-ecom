@@ -63,7 +63,13 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  await authService.ensureSystemSeedData();
+  try {
+    await authService.ensureSystemSeedData();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    log(`Skipping initial auth seed because the database is unavailable: ${message}`, "startup");
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
