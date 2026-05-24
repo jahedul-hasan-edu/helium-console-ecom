@@ -16,6 +16,7 @@ export const tenantRolePagePermissions = pgTable(
     canUpdate: boolean("can_update").notNull().default(false),
     canDelete: boolean("can_delete").notNull().default(false),
     canPreview: boolean("can_preview").notNull().default(false),
+    scopes: text("scopes"),
     isActive: boolean("is_active").notNull().default(true),
     createdBy: uuid("created_by"),
     updatedBy: uuid("updated_by"),

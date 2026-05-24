@@ -20,6 +20,7 @@ export interface PagePermissionEntry {
   canUpdate: boolean;
   canDelete: boolean;
   canPreview: boolean;
+  scopes: string[];
 }
 
 export interface RolePagePermissions {
@@ -36,5 +37,6 @@ export interface UpdatePagePermissionsRequest {
     canUpdate: boolean;
     canDelete: boolean;
     canPreview: boolean;
+    scopes: string[];
   }>;
 }

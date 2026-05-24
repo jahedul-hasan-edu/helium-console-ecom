@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Plus, Save } from "lucide-react";
+import { Edit, Plus, Save, Trash2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePagePermissions, useUpdatePagePermissions } from "@/hooks/use-PagePermission";
-import { useCreateRole, useRoles, useUpdateRole } from "@/hooks/use-Role";
+import { useCreateRole, useDeleteRole, useRoles, useUpdateRole } from "@/hooks/use-Role";
 import type { CreateRoleRequest } from "@/models/Role";
 import type { PagePermissionEntry } from "@/models/PagePermission";
 
@@ -25,6 +25,14 @@ const emptyRoleForm: CreateRoleRequest = {
 };
 
 const permissionKeys = ["canView", "canCreate", "canUpdate", "canDelete", "canPreview"] as const;
+
+function getPredefinedScopes(slug: string): string[] {
+  return [`read:${slug}`, `write:${slug}`, `manage:${slug}`];
+}
+
+function getDefaultFullScopes(slug: string): string[] {
+  return [`read:${slug}`, `manage:${slug}`];
+}
 
 function isEntryFullySelected(entry: PagePermissionEntry) {
   return entry.enabled && permissionKeys.every((permissionKey) => entry[permissionKey]);
@@ -43,7 +51,9 @@ export default function PagePermissions() {
   const [roleForm, setRoleForm] = useState<CreateRoleRequest>(emptyRoleForm);
   const createRoleMutation = useCreateRole();
   const updateRoleMutation = useUpdateRole();
+  const deleteRoleMutation = useDeleteRole();
   const updateMutation = useUpdatePagePermissions(selectedRoleId, selectedTenantId);
+  const [scopeTargetPageId, setScopeTargetPageId] = useState<string | null>(null);
 
   useEffect(() => {
     if (roles.length === 0) {
@@ -78,17 +88,39 @@ export default function PagePermissions() {
     setEntries(data?.pages || []);
   }, [data]);
 
+  useEffect(() => {
+    if (!entries.length) {
+      setScopeTargetPageId(null);
+      return;
+    }
+
+    if (scopeTargetPageId && entries.some((entry) => entry.id === scopeTargetPageId)) {
+      return;
+    }
+
+    setScopeTargetPageId(entries[0].id);
+  }, [entries, scopeTargetPageId]);
+
   const selectedRole = useMemo(
     () => roles.find((role) => role.id === selectedRoleId) || null,
     [roles, selectedRoleId]
   );
   const isTenantAdminRole = data?.role.name === "tenant_admin";
   const canEditSelectedRole = !!selectedRole && !selectedRole.isSystem;
+  const canDeleteSelectedRole = !!selectedRole && !selectedRole.isSystem;
   const isRoleMutationPending = createRoleMutation.isPending || updateRoleMutation.isPending;
   const dirty = useMemo(() => JSON.stringify(entries) !== JSON.stringify(data?.pages || []), [data?.pages, entries]);
   const selectableEntries = useMemo(() => entries.filter((entry) => entry.isActive), [entries]);
   const allEnabledSelected = selectableEntries.length > 0 && selectableEntries.every((entry) => entry.enabled);
   const allPermissionsSelected = selectableEntries.length > 0 && selectableEntries.every(isEntryFullySelected);
+  const scopeTargetEntry = useMemo(
+    () => entries.find((entry) => entry.id === scopeTargetPageId) || null,
+    [entries, scopeTargetPageId]
+  );
+  const availableScopesForTarget = useMemo(
+    () => (scopeTargetEntry ? getPredefinedScopes(scopeTargetEntry.slug) : []),
+    [scopeTargetEntry]
+  );
 
   const getColumnCheckedState = (permissionKey: typeof permissionKeys[number]) =>
     selectableEntries.length > 0 && selectableEntries.every((entry) => entry.enabled && entry[permissionKey]);
@@ -105,6 +137,7 @@ export default function PagePermissions() {
         canUpdate: false,
         canDelete: false,
         canPreview: false,
+        scopes: [],
       };
     }
 
@@ -116,6 +149,7 @@ export default function PagePermissions() {
         canUpdate: false,
         canDelete: false,
         canPreview: false,
+        scopes: [],
       };
     }
 
@@ -196,7 +230,49 @@ export default function PagePermissions() {
       canUpdate: checked,
       canDelete: checked,
       canPreview: checked,
+      scopes: checked
+        ? (() => {
+            const target = entries.find((entry) => entry.id === pageId);
+            return target ? getDefaultFullScopes(target.slug) : [];
+          })()
+        : [],
     });
+  };
+
+  const grantAllPermissionsWithScopes = () => {
+    setEntries((current) =>
+      current.map((entry) =>
+        applyEntryUpdates(entry, {
+          enabled: true,
+          canView: true,
+          canCreate: true,
+          canUpdate: true,
+          canDelete: true,
+          canPreview: true,
+          scopes: getDefaultFullScopes(entry.slug),
+        })
+      )
+    );
+  };
+
+  const toggleScope = (pageId: string, scope: string) => {
+    setEntries((current) =>
+      current.map((entry) => {
+        if (entry.id !== pageId) {
+          return entry;
+        }
+
+        const existingScopes = entry.scopes || [];
+        const nextScopes = existingScopes.includes(scope)
+          ? existingScopes.filter((item) => item !== scope)
+          : [...existingScopes, scope];
+
+        return applyEntryUpdates(entry, {
+          enabled: nextScopes.length > 0 ? true : entry.enabled,
+          scopes: nextScopes,
+        });
+      })
+    );
   };
 
   const handleRoleSubmit = async () => {
@@ -234,10 +310,22 @@ export default function PagePermissions() {
         canUpdate: entry.canUpdate,
         canDelete: entry.canDelete,
         canPreview: entry.canPreview,
+        scopes: entry.scopes || [],
       })),
     });
 
     setEntries(response.pages);
+  };
+
+  const handleDeleteSelectedRole = async () => {
+    if (!selectedRole || selectedRole.isSystem) {
+      return;
+    }
+
+    const deletedRoleId = selectedRole.id;
+    await deleteRoleMutation.mutateAsync(deletedRoleId);
+    setSelectedRoleId((current) => (current === deletedRoleId ? null : current));
+    setPreferredRoleId(null);
   };
 
   if (!tenantScoped) {
@@ -280,6 +368,15 @@ export default function PagePermissions() {
           <Button
             size="icon"
             variant="outline"
+            disabled={!canDeleteSelectedRole || deleteRoleMutation.isPending}
+            onClick={() => void handleDeleteSelectedRole()}
+            aria-label="Delete selected role"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
             onClick={openCreateRoleDialog}
             disabled={isRoleMutationPending}
             aria-label="Create role"
@@ -289,7 +386,7 @@ export default function PagePermissions() {
           <Button
             variant="outline"
             disabled={entries.length === 0 || updateMutation.isPending}
-            onClick={() => updateAllEntries({ enabled: true, canView: true, canCreate: true, canUpdate: true, canDelete: true, canPreview: true })}
+            onClick={grantAllPermissionsWithScopes}
           >
             Permission All
           </Button>
@@ -299,6 +396,45 @@ export default function PagePermissions() {
           </Button>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Scope Picker</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <Label className="min-w-32">Target page</Label>
+            <Select value={scopeTargetPageId || undefined} onValueChange={setScopeTargetPageId}>
+              <SelectTrigger className="w-full md:w-[320px]">
+                <SelectValue placeholder="Select page" />
+              </SelectTrigger>
+              <SelectContent>
+                {entries.map((entry) => (
+                  <SelectItem key={entry.id} value={entry.id}>{entry.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {availableScopesForTarget.map((scope) => {
+              const selected = !!scopeTargetEntry?.scopes?.includes(scope);
+              return (
+                <Button
+                  key={scope}
+                  type="button"
+                  variant={selected ? "default" : "outline"}
+                  size="sm"
+                  disabled={!scopeTargetEntry || updateMutation.isPending}
+                  onClick={() => scopeTargetEntry && toggleScope(scopeTargetEntry.id, scope)}
+                >
+                  {scope}
+                </Button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -315,7 +451,14 @@ export default function PagePermissions() {
                     <Checkbox
                       checked={allPermissionsSelected}
                       disabled={selectableEntries.length === 0 || updateMutation.isPending}
-                      onCheckedChange={(checked) => updateAllEntries({ enabled: checked === true, canView: checked === true, canCreate: checked === true, canUpdate: checked === true, canDelete: checked === true, canPreview: checked === true })}
+                      onCheckedChange={(checked) => {
+                        if (checked === true) {
+                          grantAllPermissionsWithScopes();
+                          return;
+                        }
+
+                        updateAllEntries({ enabled: false, canView: false, canCreate: false, canUpdate: false, canDelete: false, canPreview: false, scopes: [] });
+                      }}
                     />
                   </div>
                 </TableHead>
@@ -341,24 +484,25 @@ export default function PagePermissions() {
                     </div>
                   </TableHead>
                 ))}
+                <TableHead>Scopes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-muted-foreground">Loading page permissions...</TableCell>
+                  <TableCell colSpan={9} className="text-muted-foreground">Loading page permissions...</TableCell>
                 </TableRow>
               ) : roles.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-muted-foreground">No roles found for this tenant.</TableCell>
+                  <TableCell colSpan={9} className="text-muted-foreground">No roles found for this tenant.</TableCell>
                 </TableRow>
               ) : !selectedRoleId ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-muted-foreground">Select a role to manage permissions.</TableCell>
+                  <TableCell colSpan={9} className="text-muted-foreground">Select a role to manage permissions.</TableCell>
                 </TableRow>
               ) : entries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-muted-foreground">No pages available.</TableCell>
+                  <TableCell colSpan={9} className="text-muted-foreground">No pages available.</TableCell>
                 </TableRow>
               ) : (
                 entries.map((entry) => (
@@ -392,6 +536,25 @@ export default function PagePermissions() {
                         />
                       </TableCell>
                     ))}
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {getPredefinedScopes(entry.slug).map((scope) => {
+                          const selected = entry.scopes?.includes(scope);
+                          return (
+                            <Button
+                              key={scope}
+                              type="button"
+                              variant={selected ? "default" : "outline"}
+                              size="sm"
+                              disabled={!entry.enabled || updateMutation.isPending}
+                              onClick={() => toggleScope(entry.id, scope)}
+                            >
+                              {scope}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}

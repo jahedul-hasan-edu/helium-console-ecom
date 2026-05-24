@@ -2,20 +2,44 @@ import type { NextFunction, Response } from "express";
 import { and, eq } from "drizzle-orm";
 import { db } from "server/db";
 import { pages } from "server/db/schemas/pages";
-import { tenantPages } from "server/db/schemas/tenantPages";
+import { roles } from "server/db/schemas/roles";
 import { tenantRolePagePermissions } from "server/db/schemas/tenantRolePagePermissions";
 import { tenantRolePages } from "server/db/schemas/tenantRolePages";
+import { tenants } from "server/db/schemas/tenants";
+import { userRoles } from "server/db/schemas/userRoles";
+import { users } from "server/db/schemas/users";
 import { AUTH_MESSAGES, HTTP_STATUS, RoleName } from "server/shared/constants";
 import { ResponseHandler } from "server/shared/utils/ResponseHandler";
 import {
   ADMIN_ROUTE_PAGE_MAP,
-  HTTP_METHOD_PERMISSION_MAP,
-  type PermissionKey,
 } from "server/shared/utils/authPages";
 import type { AuthenticatedRequest } from "server/shared/utils/requestContext";
 
-function getPermissionKey(method: string): PermissionKey {
-  return HTTP_METHOD_PERMISSION_MAP[method] || "canView";
+function parseScopes(value: string | null | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .split(",")
+        .map((scope) => scope.trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function getRequiredScopes(method: string, pageSlug: string): string[] {
+  if (method === "GET") {
+    return [`read:${pageSlug}`, `write:${pageSlug}`, `manage:${pageSlug}`];
+  }
+
+  if (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
+    return [`write:${pageSlug}`, `manage:${pageSlug}`];
+  }
+
+  return [`read:${pageSlug}`, `write:${pageSlug}`, `manage:${pageSlug}`];
 }
 
 function resolvePageSlugFromPath(pathname: string): string | null {
@@ -44,6 +68,28 @@ export async function authorizationMiddleware(
     return;
   }
 
+  const [activeUserTenantRole] = await db
+    .select({ userId: users.id, tenantId: tenants.id, roleId: roles.id, userRoleId: userRoles.id })
+    .from(users)
+    .innerJoin(tenants, and(eq(tenants.id, users.tenantId), eq(tenants.isActive, true)))
+    .innerJoin(roles, and(eq(roles.id, req.user.roleId), eq(roles.isActive, true)))
+    .innerJoin(
+      userRoles,
+      and(
+        eq(userRoles.userId, req.user.userId),
+        eq(userRoles.tenantId, req.user.tenantId),
+        eq(userRoles.roleId, req.user.roleId),
+        eq(userRoles.isActive, true)
+      )
+    )
+    .where(and(eq(users.id, req.user.userId), eq(users.tenantId, req.user.tenantId), eq(users.isActive, true)))
+    .limit(1);
+
+  if (!activeUserTenantRole) {
+    ResponseHandler.error(res, AUTH_MESSAGES.ACCESS_DENIED, HTTP_STATUS.FORBIDDEN);
+    return;
+  }
+
   const pageSlug = resolvePageSlugFromPath(req.path);
   if (!pageSlug || pageSlug === "dashboard") {
     next();
@@ -61,36 +107,9 @@ export async function authorizationMiddleware(
     return;
   }
 
-  if (req.user.roleName === RoleName.TENANT_ADMIN) {
-    const [tenantPage] = await db
-      .select({ id: tenantPages.id })
-      .from(tenantPages)
-      .where(
-        and(
-          eq(tenantPages.tenantId, req.user.tenantId),
-          eq(tenantPages.pageId, page.id),
-          eq(tenantPages.isActive, true)
-        )
-      )
-      .limit(1);
-
-    if (!tenantPage) {
-      ResponseHandler.error(res, AUTH_MESSAGES.ACCESS_DENIED, HTTP_STATUS.FORBIDDEN);
-      return;
-    }
-
-    next();
-    return;
-  }
-
-  const permissionKey = getPermissionKey(req.method);
   const [permissionRecord] = await db
     .select({
-      canView: tenantRolePagePermissions.canView,
-      canCreate: tenantRolePagePermissions.canCreate,
-      canUpdate: tenantRolePagePermissions.canUpdate,
-      canDelete: tenantRolePagePermissions.canDelete,
-      canPreview: tenantRolePagePermissions.canPreview,
+      scopes: tenantRolePagePermissions.scopes,
     })
     .from(tenantRolePagePermissions)
     .innerJoin(
@@ -112,7 +131,20 @@ export async function authorizationMiddleware(
     )
     .limit(1);
 
-  if (!permissionRecord || !permissionRecord[permissionKey]) {
+  if (!permissionRecord) {
+    ResponseHandler.error(res, AUTH_MESSAGES.ACCESS_DENIED, HTTP_STATUS.FORBIDDEN);
+    return;
+  }
+
+  const definedScopes = parseScopes(permissionRecord.scopes);
+  if (definedScopes.length === 0) {
+    next();
+    return;
+  }
+
+  const requiredScopes = getRequiredScopes(req.method, page.slug);
+  const hasRequiredScope = requiredScopes.some((scope) => definedScopes.includes(scope));
+  if (!hasRequiredScope) {
     ResponseHandler.error(res, AUTH_MESSAGES.ACCESS_DENIED, HTTP_STATUS.FORBIDDEN);
     return;
   }

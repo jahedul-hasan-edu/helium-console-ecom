@@ -8,6 +8,7 @@ export const pagePermissionEntrySchema = z.object({
   canUpdate: z.boolean(),
   canDelete: z.boolean(),
   canPreview: z.boolean(),
+  scopes: z.array(z.string().trim().min(1)).default([]),
 });
 
 export const updatePagePermissionsSchema = z.object({
@@ -37,6 +38,7 @@ export const pagePermissionResponseSchema = z.object({
       canUpdate: z.boolean(),
       canDelete: z.boolean(),
       canPreview: z.boolean(),
+      scopes: z.array(z.string()),
     })
   ),
 });

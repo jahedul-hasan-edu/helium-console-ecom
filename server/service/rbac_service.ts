@@ -22,6 +22,33 @@ const SYSTEM_ROLE_NAMES = new Set<string>([RoleName.SUPER_ADMIN, RoleName.TENANT
 const TENANT_VISIBLE_SYSTEM_ROLE_NAMES = new Set<string>([RoleName.TENANT_ADMIN, RoleName.USER]);
 const SYSTEM_PAGE_SLUGS = new Set(STATIC_PAGE_DEFINITIONS.map((page) => page.slug));
 
+function getPredefinedScopesForSlug(slug: string): string[] {
+  return [`read:${slug}`, `write:${slug}`, `manage:${slug}`];
+}
+
+function parseScopes(value: string | null | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .split(",")
+        .map((scope) => scope.trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function toScopesString(scopes: string[]): string | null {
+  if (scopes.length === 0) {
+    return null;
+  }
+
+  return scopes.join(",");
+}
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -480,6 +507,7 @@ export class RbacService {
           canUpdate: isTenantAdminRole ? enabled : permission?.canUpdate ?? false,
           canDelete: isTenantAdminRole ? enabled : permission?.canDelete ?? false,
           canPreview: isTenantAdminRole ? enabled : permission?.canPreview ?? false,
+          scopes: parseScopes(permission?.scopes),
         };
       }),
     };
@@ -508,6 +536,10 @@ export class RbacService {
 
       const enabled = page.isActive ? entry.enabled : false;
       const canView = enabled && (isTenantAdminRole || entry.canView || entry.canCreate || entry.canUpdate || entry.canDelete || entry.canPreview);
+      const allowedScopes = new Set(getPredefinedScopesForSlug(page.slug));
+      const sanitizedScopes = enabled
+        ? Array.from(new Set((entry.scopes || []).map((scope) => scope.trim()).filter((scope) => allowedScopes.has(scope))))
+        : [];
       const permissionState = isTenantAdminRole
         ? {
             canView: enabled,
@@ -515,6 +547,7 @@ export class RbacService {
             canUpdate: enabled,
             canDelete: enabled,
             canPreview: enabled,
+            scopes: toScopesString(sanitizedScopes),
           }
         : {
             canView,
@@ -522,6 +555,7 @@ export class RbacService {
             canUpdate: enabled && entry.canUpdate,
             canDelete: enabled && entry.canDelete,
             canPreview: enabled && entry.canPreview,
+            scopes: toScopesString(sanitizedScopes),
           };
 
       await db
