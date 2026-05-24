@@ -906,7 +906,12 @@ export class AuthService {
 
     const clientUrl = (process.env.NEXT_PUBLIC_CLIENT_BASE_URL || process.env.NEXT_PUBLIC_APP_BASE_URL || "http://localhost:5000").replace(/\/$/, "");
     const resetUrl = `${clientUrl}/reset-password?token=${encodeURIComponent(token)}`;
-    await EmailService.sendPasswordResetLink(user.email, resetUrl);
+    try {
+      await EmailService.sendPasswordResetLink(user.email, resetUrl);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[AuthService] Failed to send password reset email to ${user.email}: ${message}`);
+    }
   }
 
   async resetPassword(req: Request): Promise<void> {

@@ -66,13 +66,17 @@ export class EmailService {
       return;
     }
 
-    await transporter.sendMail({
-      from: payload.from,
-      to: payload.to,
-      subject: payload.subject,
-      text: payload.text,
-      html: payload.html,
-    });
+    try {
+      await transporter.sendMail({
+        from: payload.from,
+        to: payload.to,
+        subject: payload.subject,
+        text: payload.text,
+        html: payload.html,
+      });
+    } catch {
+      throw new Error("Email delivery failed");
+    }
   }
 
   static async sendTwoFactorCode(email: string, code: string): Promise<void> {

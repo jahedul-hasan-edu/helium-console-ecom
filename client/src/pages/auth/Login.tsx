@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,16 @@ import { AUTH_ROUTES, AUTH_STORAGE_KEYS } from "@/lib/auth";
 
 export default function Login() {
   const [, navigate] = useLocation();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(AUTH_ROUTES.ADMIN_HOME, { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
