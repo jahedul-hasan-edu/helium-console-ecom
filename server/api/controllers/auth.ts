@@ -67,6 +67,24 @@ export async function registerAuthRoutes(app: Express): Promise<void> {
   );
 
   app.post(
+    "/api/auth/forgot-password",
+    authLimiter,
+    asyncHandler(async (req, res) => {
+      await authService.requestPasswordReset(req);
+      ResponseHandler.success(res, AUTH_MESSAGES.FORGOT_PASSWORD_EMAIL_SENT, null, HTTP_STATUS.OK);
+    })
+  );
+
+  app.post(
+    "/api/auth/reset-password",
+    authLimiter,
+    asyncHandler(async (req, res) => {
+      await authService.resetPassword(req);
+      ResponseHandler.success(res, AUTH_MESSAGES.RESET_PASSWORD_SUCCESS, null, HTTP_STATUS.OK);
+    })
+  );
+
+  app.post(
     "/api/auth/refresh",
     authLimiter,
     asyncHandler(async (req, res) => {

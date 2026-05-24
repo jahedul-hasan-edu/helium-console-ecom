@@ -21,8 +21,14 @@ export interface TwoFactorTempPayload {
   tenantId: string;
 }
 
+export interface PasswordResetPayload {
+  userId: string;
+  tenantId: string;
+}
+
 function getSecret(envKey: "JWT_SECRET" | "REFRESH_TOKEN_SECRET"): string {
-  const value = process.env[envKey];
+  const prefixedKey = `NEXT_PUBLIC_${envKey}` as const;
+  const value = process.env[prefixedKey];
   if (value) {
     return value;
   }
@@ -33,9 +39,13 @@ function getSecret(envKey: "JWT_SECRET" | "REFRESH_TOKEN_SECRET"): string {
 }
 
 export class JwtUtil {
-  private static readonly accessTokenExpiry = (process.env.ACCESS_TOKEN_EXPIRY || "15m") as SignOptions["expiresIn"];
-  private static readonly refreshTokenExpiry = (process.env.REFRESH_TOKEN_EXPIRY || "7d") as SignOptions["expiresIn"];
+  private static readonly accessTokenExpiry =
+    (process.env.NEXT_PUBLIC_ACCESS_TOKEN_EXPIRY || "15m") as SignOptions["expiresIn"];
+  private static readonly refreshTokenExpiry =
+    (process.env.NEXT_PUBLIC_REFRESH_TOKEN_EXPIRY || "7d") as SignOptions["expiresIn"];
   private static readonly tempTokenExpiry = "5m" as SignOptions["expiresIn"];
+  private static readonly passwordResetExpiry =
+    (process.env.NEXT_PUBLIC_PASSWORD_RESET_EXPIRY || "30m") as SignOptions["expiresIn"];
 
   static generateAccessToken(payload: AccessTokenPayload): string {
     return jwt.sign(payload, getSecret("JWT_SECRET"), {
@@ -58,6 +68,13 @@ export class JwtUtil {
     });
   }
 
+  static generatePasswordResetToken(payload: PasswordResetPayload): string {
+    return jwt.sign(payload, getSecret("JWT_SECRET"), {
+      expiresIn: this.passwordResetExpiry,
+      subject: payload.userId,
+    });
+  }
+
   static verifyAccessToken(token: string): AccessTokenPayload {
     return jwt.verify(token, getSecret("JWT_SECRET")) as AccessTokenPayload;
   }
@@ -68,5 +85,9 @@ export class JwtUtil {
 
   static verifyTwoFactorTempToken(token: string): TwoFactorTempPayload {
     return jwt.verify(token, getSecret("JWT_SECRET")) as TwoFactorTempPayload;
+  }
+
+  static verifyPasswordResetToken(token: string): PasswordResetPayload {
+    return jwt.verify(token, getSecret("JWT_SECRET")) as PasswordResetPayload;
   }
 }

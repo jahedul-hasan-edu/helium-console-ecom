@@ -27,6 +27,8 @@ import Roles from "@/pages/role/Roles";
 import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
 import TwoFactorVerify from "@/pages/auth/TwoFactorVerify";
+import ForgotPassword from "@/pages/auth/ForgotPassword";
+import ResetPassword from "@/pages/auth/ResetPassword";
 import { AUTH_ROUTES } from "@/lib/auth";
 import MyAccount from "@/pages/account/MyAccount";
 
@@ -47,6 +49,8 @@ function Router() {
       <Route path={AUTH_ROUTES.LOGIN} component={Login} />
       <Route path={AUTH_ROUTES.REGISTER} component={Register} />
       <Route path={AUTH_ROUTES.TWO_FACTOR_VERIFY} component={TwoFactorVerify} />
+      <Route path={AUTH_ROUTES.FORGOT_PASSWORD} component={ForgotPassword} />
+      <Route path={AUTH_ROUTES.RESET_PASSWORD} component={ResetPassword} />
 
       <Route path="/admin">
         <AuthShell><Dashboard /></AuthShell>

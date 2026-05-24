@@ -15,6 +15,26 @@ export const loginSchema = z.object({
 
 export type LoginDTO = z.infer<typeof loginSchema>;
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().email("Valid email is required"),
+}).strict();
+
+export type ForgotPasswordDTO = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1, "Reset token is required"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z.string().min(1, "Confirm password is required"),
+  })
+  .strict()
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export type ResetPasswordDTO = z.infer<typeof resetPasswordSchema>;
+
 export const verify2FASchema = z.object({
   tempToken: z.string().min(1, "Temp token is required").optional(),
   code: z.string().trim().length(6, "Code must be 6 digits"),

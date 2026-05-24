@@ -30,5 +30,7 @@ export const AUTH_ROUTES = {
   LOGIN: "/login",
   REGISTER: "/register",
   TWO_FACTOR_VERIFY: "/2fa-verify",
+  FORGOT_PASSWORD: "/forgot-password",
+  RESET_PASSWORD: "/reset-password",
   ADMIN_HOME: "/admin",
 } as const;

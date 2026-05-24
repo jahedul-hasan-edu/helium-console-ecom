@@ -20,11 +20,13 @@ import {
   type PublicSubscriptionPlanDTO,
   type RegisterSuperAdminDTO,
   type RegisterTenantAdminDTO,
+  forgotPasswordSchema,
   type SystemStatusResponseDTO,
   loginSchema,
   refreshTokenSchema,
   registerSuperAdminSchema,
   registerTenantAdminSchema,
+  resetPasswordSchema,
   twoFactorSetupSchema,
   verify2FASchema,
 } from "server/shared/dtos/Auth";
@@ -886,6 +888,73 @@ export class AuthService {
 
     const role = await this.resolveRole(user.id, user.tenantId);
     return this.createSessionAndTokens(user, role, req);
+  }
+
+  async requestPasswordReset(req: Request): Promise<void> {
+    const { email } = forgotPasswordSchema.parse(req.body);
+    const normalizedEmail = email.toLowerCase();
+
+    const [user] = await db.select().from(users).where(eq(users.email, normalizedEmail)).limit(1);
+    if (!user || !user.isActive) {
+      return;
+    }
+
+    const token = JwtUtil.generatePasswordResetToken({
+      userId: user.id,
+      tenantId: user.tenantId,
+    });
+
+    const clientUrl = (process.env.NEXT_PUBLIC_CLIENT_BASE_URL || process.env.NEXT_PUBLIC_APP_BASE_URL || "http://localhost:5000").replace(/\/$/, "");
+    const resetUrl = `${clientUrl}/reset-password?token=${encodeURIComponent(token)}`;
+    await EmailService.sendPasswordResetLink(user.email, resetUrl);
+  }
+
+  async resetPassword(req: Request): Promise<void> {
+    const parsed = resetPasswordSchema.parse(req.body);
+
+    let decoded: { userId: string; tenantId: string };
+    try {
+      decoded = JwtUtil.verifyPasswordResetToken(parsed.token);
+    } catch {
+      throw new Error(AUTH_MESSAGES.RESET_PASSWORD_INVALID_TOKEN);
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1);
+    if (!user || !user.isActive || user.tenantId !== decoded.tenantId) {
+      throw new Error(AUTH_MESSAGES.RESET_PASSWORD_INVALID_TOKEN);
+    }
+
+    const hashedPassword = PasswordUtil.hashPassword(parsed.password);
+    await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        emailOtpCode: null,
+        emailOtpExpiresAt: null,
+        updatedOn: new Date(),
+        userIp: getUserIp(req),
+      })
+      .where(eq(users.id, user.id));
+
+    const activeSessions = await db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(and(eq(sessions.userId, user.id), eq(sessions.isActive, true)));
+
+    const activeSessionIds = activeSessions.map((session) => session.id);
+    if (activeSessionIds.length > 0) {
+      await db
+        .update(refreshTokens)
+        .set({ revokedOn: new Date() })
+        .where(and(inArray(refreshTokens.sessionId, activeSessionIds), isNull(refreshTokens.revokedOn)));
+
+      await db
+        .update(sessions)
+        .set({ revokedOn: new Date(), isActive: false })
+        .where(inArray(sessions.id, activeSessionIds));
+    }
   }
 
   async refresh(refreshTokenValue: string, req: Request): Promise<Pick<LoginSuccessResponse, "accessToken" | "refreshToken">> {

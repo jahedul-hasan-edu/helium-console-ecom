@@ -78,6 +78,11 @@ export default function Login() {
                   onChange={(event) => setPassword(event.target.value)}
                 />
               </div>
+              <div className="flex justify-end">
+                <Link href={AUTH_ROUTES.FORGOT_PASSWORD}>
+                  <a className="text-sm font-medium text-primary underline-offset-4 hover:underline">Forgot password?</a>
+                </Link>
+              </div>
               <Button className="w-full" disabled={isSubmitting} type="submit">
                 {isSubmitting ? "Signing in..." : "Sign In"}
               </Button>

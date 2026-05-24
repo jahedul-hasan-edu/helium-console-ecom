@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_SERVICE_KEY = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET_NAME = "helium-ecom-bucket";
 
 if (!SUPABASE_URL) {
@@ -19,9 +19,9 @@ const isValidServiceKey = SUPABASE_SERVICE_KEY &&
   SUPABASE_SERVICE_KEY.split(".").length === 3;
 
 if (!SUPABASE_SERVICE_KEY) {
-  console.warn("Missing SUPABASE_SERVICE_ROLE_KEY - will use anon key (may fail with RLS)");
+  console.warn("Missing NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY - will use anon key (may fail with RLS)");
 } else if (!isValidServiceKey) {
-  console.warn("Invalid or placeholder SUPABASE_SERVICE_ROLE_KEY format - will use anon key (may fail with RLS)");
+  console.warn("Invalid or placeholder NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY format - will use anon key (may fail with RLS)");
 }
 
 // For server-side uploads, prioritize service role key if valid
