@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, or, sql } from "drizzle-orm";
 import { db } from "server/db";
+import { orderItems } from "server/db/schemas/orderItems";
 import { orders } from "server/db/schemas/orders";
 import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
 import { ORDER_SORT_FIELDS } from "server/shared/constants/feature/orderMessages";
@@ -188,7 +189,10 @@ export class StorageOrder implements IStorageOrder {
   }
 
   async deleteOrder(id: string, tenantId?: string): Promise<void> {
-    await db.delete(orders).where(buildOrderIdentityCondition(id, tenantId));
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`delete from order_items where order_id = ${id}::uuid`);
+      await tx.delete(orders).where(buildOrderIdentityCondition(id, tenantId));
+    });
   }
 }
 

@@ -1,11 +1,12 @@
 import { pgTable, text, uuid, timestamp, integer, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { orders } from "./orders";
 
 // === TABLE DEFINITIONS ===
 
 export const orderItems = pgTable("order_items", {
   id: uuid("id").primaryKey().defaultRandom(),
-  orderId: uuid("order_id"),
+  orderId: uuid("order_id").references(() => orders.id, { onDelete: "cascade" }),
   productId: uuid("product_id"),
   quantity: integer("quantity"),
   unit: text("unit"),
