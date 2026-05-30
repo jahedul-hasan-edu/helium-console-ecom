@@ -1,5 +1,5 @@
 import type { Request } from "express";
-import { and, asc, eq, inArray, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, notInArray, or, sql } from "drizzle-orm";
 import { db } from "server/db";
 import { pages } from "server/db/schemas/pages";
 import { roles } from "server/db/schemas/roles";
@@ -8,10 +8,11 @@ import { tenantRolePagePermissions } from "server/db/schemas/tenantRolePagePermi
 import { tenantRolePages } from "server/db/schemas/tenantRolePages";
 import { userRoles } from "server/db/schemas/userRoles";
 import { RoleName } from "server/shared/constants";
-import type { CreatePageDTO, PageResponseDTO } from "server/shared/dtos/Page";
+import { PAGINATION_DEFAULTS } from "server/shared/constants/pagination";
+import type { CreatePageDTO, GetPagesResponseDTO, PageResponseDTO } from "server/shared/dtos/Page";
 import type { PagePermissionResponseDTO } from "server/shared/dtos/PagePermission";
 import type { RoleResponseDTO } from "server/shared/dtos/Role";
-import { createPageSchema, updatePageSchema } from "server/shared/dtos/Page";
+import { createPageSchema, getPagesQuerySchema, updatePageSchema } from "server/shared/dtos/Page";
 import { updatePagePermissionsSchema } from "server/shared/dtos/PagePermission";
 import { createRoleSchema, updateRoleSchema } from "server/shared/dtos/Role";
 import { authService } from "server/service/auth_service";
@@ -63,6 +64,22 @@ function assertAuthenticatedUser(req: AuthenticatedRequest) {
   }
 
   return req.user;
+}
+
+function toPageResponse(page: typeof pages.$inferSelect): PageResponseDTO {
+  return {
+    id: page.id,
+    title: page.title,
+    slug: page.slug,
+    icon: page.icon,
+    parentId: page.parentId,
+    sortOrder: page.sortOrder,
+    routePath: page.routePath,
+    isActive: page.isActive,
+    isSystem: SYSTEM_PAGE_SLUGS.has(page.slug),
+    createdOn: page.createdOn ?? null,
+    updatedOn: page.updatedOn ?? null,
+  };
 }
 
 export class RbacService {
@@ -154,27 +171,72 @@ export class RbacService {
     }
   }
 
-  async getPages(req: Request): Promise<PageResponseDTO[]> {
+  async getPages(req: Request): Promise<GetPagesResponseDTO> {
     const authenticatedRequest = req as AuthenticatedRequest;
     if (authenticatedRequest.user?.roleName !== RoleName.SUPER_ADMIN) {
       throw new Error("Only super admins can manage pages");
     }
 
     await authService.ensureSystemSeedData();
-    const pageRows = await db.select().from(pages).orderBy(asc(pages.sortOrder), asc(pages.title));
-    return pageRows.map((page) => ({
-      id: page.id,
-      title: page.title,
-      slug: page.slug,
-      icon: page.icon,
-      parentId: page.parentId,
-      sortOrder: page.sortOrder,
-      routePath: page.routePath,
-      isActive: page.isActive,
-      isSystem: SYSTEM_PAGE_SLUGS.has(page.slug),
-      createdOn: page.createdOn ?? null,
-      updatedOn: page.updatedOn ?? null,
-    }));
+    const { tenantId: _ignoredTenantId, ...queryInput } = req.query as Record<string, unknown> & { tenantId?: unknown };
+    const query = getPagesQuerySchema.parse(queryInput);
+    const page = query.page || PAGINATION_DEFAULTS.PAGE;
+    const pageSize = query.pageSize || PAGINATION_DEFAULTS.PAGE_SIZE;
+    const search = query.search?.trim();
+    const sortBy = query.sortBy || "sortOrder";
+    const sortOrder = query.sortOrder || PAGINATION_DEFAULTS.SORT_ORDER;
+
+    const whereCondition = search
+      ? or(
+          sql`${pages.title} ILIKE ${`%${search}%`}`,
+          sql`${pages.slug} ILIKE ${`%${search}%`}`,
+          sql`${pages.routePath} ILIKE ${`%${search}%`}`
+        )
+      : undefined;
+
+    const sortColumn =
+      sortBy === "title"
+        ? pages.title
+        : sortBy === "slug"
+          ? pages.slug
+          : sortBy === "routePath"
+            ? pages.routePath
+            : sortBy === "createdOn"
+              ? pages.createdOn
+              : sortBy === "updatedOn"
+                ? pages.updatedOn
+                : pages.sortOrder;
+    const primarySort = (sortOrder === "asc" ? asc : desc)(sortColumn);
+    const offset = (page - 1) * pageSize;
+
+    const countResult = whereCondition
+      ? await db.select({ count: sql<number>`count(*)` }).from(pages).where(whereCondition)
+      : await db.select({ count: sql<number>`count(*)` }).from(pages);
+
+    const pageRows = whereCondition
+      ? await db
+          .select()
+          .from(pages)
+          .where(whereCondition)
+          .orderBy(primarySort, asc(pages.title))
+          .limit(pageSize)
+          .offset(offset)
+      : await db
+          .select()
+          .from(pages)
+          .orderBy(primarySort, asc(pages.title))
+          .limit(pageSize)
+          .offset(offset);
+
+    const total = Number(countResult[0]?.count || 0);
+
+    return {
+      items: pageRows.map(toPageResponse),
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
   }
 
   async createPage(req: Request): Promise<PageResponseDTO> {
@@ -183,7 +245,8 @@ export class RbacService {
       throw new Error("Only super admins can manage pages");
     }
 
-    const payload = createPageSchema.parse(req.body);
+    const { tenantId: _ignoredTenantId, ...bodyInput } = req.body as Record<string, unknown> & { tenantId?: unknown };
+    const payload = createPageSchema.parse(bodyInput);
     await this.ensurePageUniqueness(payload.slug);
 
     const [page] = await db
@@ -199,19 +262,7 @@ export class RbacService {
       })
       .returning();
 
-    return {
-      id: page.id,
-      title: page.title,
-      slug: page.slug,
-      icon: page.icon,
-      parentId: page.parentId,
-      sortOrder: page.sortOrder,
-      routePath: page.routePath,
-      isActive: page.isActive,
-      isSystem: false,
-      createdOn: page.createdOn ?? null,
-      updatedOn: page.updatedOn ?? null,
-    };
+    return toPageResponse(page);
   }
 
   async updatePage(id: string, req: Request): Promise<PageResponseDTO> {
@@ -220,7 +271,8 @@ export class RbacService {
       throw new Error("Only super admins can manage pages");
     }
 
-    const payload = updatePageSchema.parse(req.body);
+    const { tenantId: _ignoredTenantId, ...bodyInput } = req.body as Record<string, unknown> & { tenantId?: unknown };
+    const payload = updatePageSchema.parse(bodyInput);
     const [existingPage] = await db.select().from(pages).where(eq(pages.id, id)).limit(1);
     if (!existingPage) {
       throw new Error("Page not found");
@@ -251,17 +303,8 @@ export class RbacService {
     const [page] = await db.update(pages).set(updatePayload).where(eq(pages.id, id)).returning();
 
     return {
-      id: page.id,
-      title: page.title,
-      slug: page.slug,
-      icon: page.icon,
-      parentId: page.parentId,
-      sortOrder: page.sortOrder,
-      routePath: page.routePath,
-      isActive: page.isActive,
+      ...toPageResponse(page),
       isSystem,
-      createdOn: page.createdOn ?? null,
-      updatedOn: page.updatedOn ?? null,
     };
   }
 

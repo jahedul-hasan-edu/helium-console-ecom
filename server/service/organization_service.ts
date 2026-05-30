@@ -18,7 +18,17 @@ function createHttpError(message: string, statusCode: number): HttpError {
 }
 
 function getCurrentTenantId(req: Request): string {
-  return extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId || (req.query.tenantId as string);
+  const tenantId =
+    extractTenantId(req as AuthenticatedRequest) ||
+    (req as AuthenticatedRequest).user?.tenantId ||
+    (req.query.tenantId as string) ||
+    ((req.body as { tenantId?: string } | undefined)?.tenantId as string | undefined);
+
+  if (!tenantId) {
+    throw createHttpError(ORGANIZATION_MESSAGES.TENANT_SCOPE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
+  }
+
+  return tenantId;
 }
 
 export const organizationService = {
@@ -46,11 +56,16 @@ export const organizationService = {
   },
 
   async createOrganization(req: Request) {
-    const tenantId = extractTenantId(req as AuthenticatedRequest) || (req as AuthenticatedRequest).user?.tenantId || (req.body.tenantId as string);
+    const tenantId = getCurrentTenantId(req);
     const data: CreateOrganizationDTO = req.body;
     const userIp = getUserIp(req);
     const userId = (req as any).user?.id as string | undefined;
     const file = (req as any).file as Express.Multer.File | undefined;
+
+    const tenantAlreadyHasOrganization = await storageOrganization.hasOrganizationForTenant(tenantId);
+    if (tenantAlreadyHasOrganization) {
+      throw createHttpError(ORGANIZATION_MESSAGES.ORGANIZATION_LIMIT_REACHED, HTTP_STATUS.CONFLICT);
+    }
 
     const isDuplicate = await storageOrganization.checkDuplicateTitle(data.title, tenantId);
     if (isDuplicate) {
@@ -94,7 +109,7 @@ export const organizationService = {
 
   async updateOrganization(id: string, req: Request) {
     const currentTenantId = getCurrentTenantId(req);
-    const updates: UpdateOrganizationDTO = req.body;
+    const { tenantId: _ignoredTenantId, ...updates } = req.body as UpdateOrganizationDTO & { tenantId?: string };
     const userIp = getUserIp(req);
     const userId = (req as any).user?.id as string | undefined;
     const file = (req as any).file as Express.Multer.File | undefined;
@@ -104,7 +119,7 @@ export const organizationService = {
       throw createHttpError(ORGANIZATION_MESSAGES.ORGANIZATION_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
 
-    const nextTenantId = updates.tenantId || existingOrganization.tenantId || currentTenantId;
+    const nextTenantId = existingOrganization.tenantId || currentTenantId;
     const nextTitle = updates.title || existingOrganization.title || "";
     const existingTitle = existingOrganization.title || "";
 

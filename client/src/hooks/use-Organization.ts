@@ -24,7 +24,7 @@ function buildOrganizationsUrl(basePath: string, params?: GetOrganizationsParams
 }
 
 function appendFormData(formData: FormData, data: CreateOrganizationRequest | UpdateOrganizationRequest) {
-  const stringFields: Array<keyof CreateOrganizationRequest> = [
+  const stringFields = [
     "tenantId",
     "title",
     "logoTitle",
@@ -38,10 +38,12 @@ function appendFormData(formData: FormData, data: CreateOrganizationRequest | Up
     "license",
     "privacyPolicy",
     "returnPolicy",
-  ];
+  ] as const;
+
+  const record = data as Partial<Record<(typeof stringFields)[number], string>>;
 
   stringFields.forEach((field) => {
-    const value = data[field];
+    const value = record[field];
     if (typeof value === "string") {
       formData.append(field, value);
     }
@@ -69,6 +71,7 @@ export function useOrganizations(params?: GetOrganizationsParams) {
       apiService.get<ListResponse<Organization>>(url, {
         showSuccessToast: false,
       }),
+    enabled: !!params?.tenantId,
   });
 }
 
@@ -82,7 +85,7 @@ export function useOrganization(id: string | null, tenantId?: string | null) {
       apiService.get<Organization>(url, {
         showSuccessToast: false,
       }),
-    enabled: !!id,
+    enabled: !!id && !!tenantId,
   });
 }
 

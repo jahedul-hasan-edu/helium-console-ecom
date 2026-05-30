@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, Plus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateHomeSetting, useHomeSettings, useCreateHomeSetting, useDeleteHomeSetting } from "@/hooks/use-HomeSetting";
 import { useTenants } from "@/hooks/use-Tenant";
@@ -143,14 +143,7 @@ export default function HomeSettings() {
         if (col.key === 'isActive') {
           return {
             ...col,
-            render: (value: any) => (
-              <Badge 
-                variant={value ? "default" : "destructive"} 
-                className={value ? "bg-green-500 hover:bg-green-600" : ""}
-              >
-                {value ? "Active" : "Inactive"}
-              </Badge>
-            )
+            render: (value: any) => <StatusBadge status={value ? "active" : "inactive"} />
           };
         }
         return col;

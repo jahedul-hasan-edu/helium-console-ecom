@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Edit, Plus, Save, Trash2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -511,8 +511,8 @@ export default function PagePermissions() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{entry.title}</span>
-                          {entry.isSystem && <Badge variant="outline">System</Badge>}
-                          {!entry.isActive && <Badge variant="secondary">Globally inactive</Badge>}
+                          {entry.isSystem && <StatusBadge status="system" />}
+                          {!entry.isActive && <StatusBadge status="inactive" label="Globally inactive" />}
                         </div>
                         <p className="text-xs text-muted-foreground">{entry.routePath}</p>
                       </div>

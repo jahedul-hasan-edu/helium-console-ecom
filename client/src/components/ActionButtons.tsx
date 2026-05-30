@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 interface ActionButtonsProps {
   onEdit: () => void;
   onDelete: () => void;
+  deleteDisabled?: boolean;
   showLabel?: boolean;
   size?: "sm" | "default" | "lg";
   variant?: "default" | "ghost" | "outline";
@@ -16,6 +17,7 @@ interface ActionButtonsProps {
 export function ActionButtons({
   onEdit,
   onDelete,
+  deleteDisabled = false,
   showLabel = false,
   size = "sm",
   variant = "outline",
@@ -36,6 +38,7 @@ export function ActionButtons({
         variant={variant}
         size={size}
         onClick={onDelete}
+        disabled={deleteDisabled}
         title="Delete"
         className="gap-2 text-destructive hover:bg-destructive/10"
       >

@@ -1,16 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Plus, Trash2 } from "lucide-react";
+import { Edit, Plus, Search, Trash2 } from "lucide-react";
+import { ActionButtons } from "@/components/ActionButtons";
+import { PaginatedDataTable } from "@/components/PaginatedDataTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCreatePage, useDeletePage, usePages, useUpdatePage } from "@/hooks/use-Page";
-import type { AdminPage, CreatePageRequest } from "@/models/Page";
+import type { AdminPage, CreatePageRequest, PageSortField } from "@/models/Page";
 
 const emptyForm: CreatePageRequest = {
   title: "",
@@ -23,7 +30,11 @@ const emptyForm: CreatePageRequest = {
 };
 
 export default function Pages() {
-  const { data: pages = [], isLoading } = usePages();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sortBy, setSortBy] = useState<PageSortField | undefined>(undefined);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc" | undefined>(undefined);
   const createMutation = useCreatePage();
   const updateMutation = useUpdatePage();
   const deleteMutation = useDeletePage();
@@ -32,6 +43,21 @@ export default function Pages() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedPage, setSelectedPage] = useState<AdminPage | null>(null);
   const [form, setForm] = useState<CreatePageRequest>(emptyForm);
+
+  const { data: pagesData, isLoading } = usePages({
+    page: currentPage,
+    pageSize,
+    search: searchTerm || undefined,
+    sortBy,
+    sortOrder,
+  });
+  const { data: pageOptionsData } = usePages({
+    page: 1,
+    pageSize: 100,
+    sortBy: "title",
+    sortOrder: "asc",
+  });
+  const pages = pagesData?.items || [];
 
   useEffect(() => {
     if (!selectedPage) {
@@ -50,21 +76,92 @@ export default function Pages() {
     });
   }, [selectedPage]);
 
-  const sortedPages = useMemo(
-    () => [...pages].sort((left, right) => left.sortOrder - right.sortOrder || left.title.localeCompare(right.title)),
-    [pages]
+  const parentOptions = useMemo(
+    () => (pageOptionsData?.items || []).filter((page) => page.id !== selectedPage?.id),
+    [pageOptionsData?.items, selectedPage?.id]
   );
 
-  const handleSubmit = async () => {
-    if (selectedPage) {
-      await updateMutation.mutateAsync({ id: selectedPage.id, ...form });
+  const pageTitleById = useMemo(
+    () => new Map(parentOptions.map((page) => [page.id, page.title])),
+    [parentOptions]
+  );
+
+  const totalPages = pagesData?.total ? Math.ceil(pagesData.total / (pagesData.pageSize || pageSize)) : 0;
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "title" as const,
+        label: "Title",
+        sortable: true,
+      },
+      {
+        key: "slug" as const,
+        label: "Slug",
+        sortable: true,
+      },
+      {
+        key: "routePath" as const,
+        label: "Route",
+        sortable: true,
+      },
+      {
+        key: "parentId" as const,
+        label: "Parent",
+        render: (value: string | null | undefined) => value ? pageTitleById.get(value) || "Unknown page" : "Top level",
+      },
+      {
+        key: "sortOrder" as const,
+        label: "Order",
+        sortable: true,
+      },
+      {
+        key: "isActive" as const,
+        label: "Status",
+        render: (value: boolean) => <StatusBadge status={value ? "active" : "inactive"} />,
+      },
+      {
+        key: "isSystem" as const,
+        label: "Type",
+        render: (value: boolean) => <StatusBadge status={value ? "system" : "custom"} />,
+      },
+    ],
+    [pageTitleById]
+  );
+
+  const handleSort = (field: keyof AdminPage) => {
+    const nextField = field as PageSortField;
+
+    if (sortBy === nextField) {
+      if (sortOrder === "asc") {
+        setSortOrder("desc");
+      } else if (sortOrder === "desc") {
+        setSortBy(undefined);
+        setSortOrder(undefined);
+      }
     } else {
-      await createMutation.mutateAsync(form);
+      setSortBy(nextField);
+      setSortOrder("asc");
     }
 
-    setIsEditorOpen(false);
-    setSelectedPage(null);
-    setForm(emptyForm);
+    setCurrentPage(1);
+  };
+
+  const handleSubmit = async () => {
+    try {
+      if (selectedPage) {
+        await updateMutation.mutateAsync({ id: selectedPage.id, ...form });
+      } else {
+        await createMutation.mutateAsync(form);
+      }
+
+      setIsEditorOpen(false);
+      setSelectedPage(null);
+      setForm(emptyForm);
+      setCurrentPage(1);
+    } catch {
+      // apiService already surfaces a toast; keep the dialog open so the user can correct the form.
+    }
   };
 
   const handleDelete = async () => {
@@ -72,9 +169,13 @@ export default function Pages() {
       return;
     }
 
-    await deleteMutation.mutateAsync(selectedPage.id);
-    setIsDeleteOpen(false);
-    setSelectedPage(null);
+    try {
+      await deleteMutation.mutateAsync(selectedPage.id);
+      setIsDeleteOpen(false);
+      setSelectedPage(null);
+    } catch {
+      // apiService already surfaces a toast; keep the confirmation open on failure.
+    }
   };
 
   return (
@@ -92,75 +193,52 @@ export default function Pages() {
         </Button>
       </div>
 
-      <Alert>
-        <AlertTitle>System pages stay protected</AlertTitle>
-        <AlertDescription>
-          Seeded pages can be renamed visually and re-ordered, but their core route and slug stay locked so authorization remains consistent.
-        </AlertDescription>
-      </Alert>
+      <div className="mb-4 max-w-sm">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={searchTerm}
+                className="pl-9"
+                placeholder="Search pages by title, slug, or route..."
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+          </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Page Directory</CardTitle>
-          <CardDescription>{sortedPages.length} total pages</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead>Route</TableHead>
-                <TableHead>Order</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell className="text-muted-foreground" colSpan={7}>Loading pages...</TableCell>
-                </TableRow>
-              ) : sortedPages.length === 0 ? (
-                <TableRow>
-                  <TableCell className="text-muted-foreground" colSpan={7}>No pages found.</TableCell>
-                </TableRow>
-              ) : (
-                sortedPages.map((page) => (
-                  <TableRow key={page.id}>
-                    <TableCell className="font-medium">{page.title}</TableCell>
-                    <TableCell>{page.slug}</TableCell>
-                    <TableCell>{page.routePath}</TableCell>
-                    <TableCell>{page.sortOrder}</TableCell>
-                    <TableCell>
-                      <Badge variant={page.isActive ? "default" : "secondary"}>{page.isActive ? "Active" : "Inactive"}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={page.isSystem ? "outline" : "secondary"}>{page.isSystem ? "System" : "Custom"}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-2">
-                        <Button size="icon" variant="outline" onClick={() => { setSelectedPage(page); setIsEditorOpen(true); }}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          disabled={page.isSystem}
-                          onClick={() => { setSelectedPage(page); setIsDeleteOpen(true); }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+          <PaginatedDataTable
+            columns={columns}
+            data={pages}
+            isLoading={isLoading}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={handleSort}
+            emptyMessage="No pages found."
+            renderActions={(page) => (
+              <ActionButtons
+                onEdit={() => {
+                  setSelectedPage(page);
+                  setIsEditorOpen(true);
+                }}
+                onDelete={() => {
+                  setSelectedPage(page);
+                  setIsDeleteOpen(true);
+                }}
+                deleteDisabled={page.isSystem}
+              />
+            )}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={pagesData?.total || 0}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+          />
 
       <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
         <DialogContent className="sm:max-w-2xl">
@@ -208,6 +286,25 @@ export default function Pages() {
                 value={form.sortOrder}
                 onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="page-parent">Parent Page</Label>
+              <Select
+                value={form.parentId || "__none__"}
+                onValueChange={(value) => setForm((prev) => ({ ...prev, parentId: value === "__none__" ? null : value }))}
+              >
+                <SelectTrigger id="page-parent">
+                  <SelectValue placeholder="Select a parent page" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Top level page</SelectItem>
+                  {parentOptions.map((page) => (
+                    <SelectItem key={page.id} value={page.id}>
+                      {page.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center justify-between rounded-lg border px-4 py-3">
               <div>

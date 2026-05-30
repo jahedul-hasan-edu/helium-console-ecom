@@ -10,7 +10,15 @@ export async function registerPageRoutes(app: Express): Promise<void> {
     api.pages.list.path,
     asyncHandler(async (req, res) => {
       const response = await rbacService.getPages(req);
-      ResponseHandler.list(res, response, "Pages retrieved successfully", HTTP_STATUS.OK);
+      ResponseHandler.paginated(
+        res,
+        response.items,
+        response.total,
+        response.page,
+        response.pageSize,
+        "Pages retrieved successfully",
+        HTTP_STATUS.OK
+      );
     })
   );
 

@@ -78,7 +78,6 @@ export const IMAGE_CONFIG = {
 } as const;
 
 export interface OrganizationFormValues {
-  tenantId: string;
   title: string;
   logoTitle: string;
   phone: string;
@@ -95,7 +94,6 @@ export interface OrganizationFormValues {
 }
 
 export const EMPTY_ORGANIZATION_FORM: OrganizationFormValues = {
-  tenantId: "",
   title: "",
   logoTitle: "",
   phone: "",

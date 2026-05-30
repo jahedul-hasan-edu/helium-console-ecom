@@ -1,13 +1,14 @@
 import { z } from "zod";
-import { createPageSchema, pageResponseSchema, updatePageSchema } from "server/shared/dtos/Page";
+import { createPageSchema, getPagesQuerySchema, pageResponseSchema, paginatedPagesResponseSchema, updatePageSchema } from "server/shared/dtos/Page";
 
 export const api = {
   pages: {
     list: {
       method: "GET" as const,
       path: "/api/admin/pages",
+      input: getPagesQuerySchema,
       responses: {
-        200: z.array(pageResponseSchema),
+        200: paginatedPagesResponseSchema,
       },
     },
     create: {

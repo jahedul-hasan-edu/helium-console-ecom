@@ -10,17 +10,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { getFieldError, ValidationError } from "@/lib/formValidator";
-import { useTenants } from "@/hooks/use-Tenant";
 import { Organization, UpdateOrganizationRequest } from "@/models/Organization";
 import {
   BUTTON_LABELS,
@@ -63,7 +55,6 @@ function mapOrganizationToFormValues(organization?: Organization): OrganizationF
   }
 
   return {
-    tenantId: organization.tenantId || "",
     title: organization.title || "",
     logoTitle: organization.logoTitle || "",
     phone: organization.phone || "",
@@ -92,7 +83,6 @@ export function EditOrganizationModal({
   const [imagePreview, setImagePreview] = useState("");
   const [removeImage, setRemoveImage] = useState(false);
   const [errors, setErrors] = useState<ValidationError[]>([]);
-  const { data: tenantsData, isLoading: tenantsLoading } = useTenants({ pageSize: 1000 });
 
   useEffect(() => {
     if (!organization || !isOpen) {
@@ -178,32 +168,6 @@ export function EditOrganizationModal({
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2 md:col-span-2">
-              <Label className="text-sm font-medium">{ORGANIZATION_FORM.TENANT_LABEL}</Label>
-              <Select
-                value={formData.tenantId}
-                disabled={isLoading || tenantsLoading}
-                onValueChange={(value) => setFieldValue("tenantId", value)}
-              >
-                <SelectTrigger className={getFieldError("tenantId", errors) ? "border-destructive focus:ring-destructive" : ""}>
-                  <SelectValue placeholder={ORGANIZATION_FORM.TENANT_PLACEHOLDER} />
-                </SelectTrigger>
-                <SelectContent>
-                  {tenantsData?.items?.map((tenant) => (
-                    <SelectItem key={tenant.id} value={tenant.id}>
-                      {tenant.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {getFieldError("tenantId", errors) ? (
-                <div className="flex items-center gap-2 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>{getFieldError("tenantId", errors)}</span>
-                </div>
-              ) : null}
-            </div>
-
             {basicFieldConfig.map((field) => (
               <div key={field.key} className="space-y-2">
                 <Label htmlFor={field.key} className="text-sm font-medium">

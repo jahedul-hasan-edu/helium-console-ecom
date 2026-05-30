@@ -31,8 +31,6 @@ export const STATIC_PAGE_DEFINITIONS: StaticPageDefinition[] = [
   { title: "Page Permissions", slug: "page-permissions", icon: "Settings", routePath: "/admin/page-permissions", sortOrder: 19, parentId: null },
 ];
 
-export const HIDDEN_NAVIGATION_PAGE_SLUGS = ["users", "roles", "page-permissions"] as const;
-
 export const SUPER_ADMIN_ONLY_PAGE_SLUGS = ["subscription-plans", "tenants", "tenant-subscriptions", "pages"] as const;
 
 export const ADMIN_ROUTE_PAGE_MAP: Record<string, string> = {

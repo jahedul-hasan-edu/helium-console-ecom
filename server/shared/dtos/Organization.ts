@@ -14,7 +14,7 @@ const booleanFromForm = z.union([
 export const organizationSchema = createInsertSchema(organizations);
 
 export const createOrganizationSchema = z.object({
-  tenantId: z.string().uuid("Invalid tenant ID"),
+  tenantId: z.string().uuid("Invalid tenant ID").optional(),
   title: requiredText("Title is required"),
   logoTitle: requiredText("Logo title is required"),
   phone: requiredText("Phone is required"),
@@ -33,7 +33,6 @@ export const createOrganizationSchema = z.object({
 export type CreateOrganizationDTO = z.infer<typeof createOrganizationSchema>;
 
 export const updateOrganizationSchema = z.object({
-  tenantId: z.string().uuid("Invalid tenant ID").optional(),
   title: optionalText("Title is required"),
   logoTitle: optionalText("Logo title is required"),
   phone: optionalText("Phone is required"),

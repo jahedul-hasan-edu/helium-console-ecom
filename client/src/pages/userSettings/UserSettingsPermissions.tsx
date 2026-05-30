@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Edit3, Plus, Save } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -329,8 +329,8 @@ export function UserSettingsPermissions() {
                             <div className="min-w-0 space-y-1">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="font-medium text-foreground">{entry.title}</span>
-                                {entry.isSystem && <Badge variant="outline">System</Badge>}
-                                {!entry.isActive && <Badge variant="secondary">Inactive</Badge>}
+                                {entry.isSystem && <StatusBadge status="system" />}
+                                {!entry.isActive && <StatusBadge status="inactive" />}
                               </div>
                               <p className="truncate text-xs text-muted-foreground">{entry.routePath}</p>
                             </div>

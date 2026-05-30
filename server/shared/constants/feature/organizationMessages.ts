@@ -7,6 +7,8 @@ export const ORGANIZATION_MESSAGES = {
 
   ORGANIZATION_NOT_FOUND: "Organization not found",
   ORGANIZATION_ALREADY_EXISTS: "Organization with this title already exists for this tenant",
+  ORGANIZATION_LIMIT_REACHED: "Only one organization can be created for a tenant",
+  TENANT_SCOPE_REQUIRED: "Select a tenant from the top navigation before managing organizations",
   INVALID_ORGANIZATION_DATA: "Invalid organization data",
   INVALID_ORGANIZATION_IMAGE: "Organization image must be an image file smaller than 1MB",
   FAILED_TO_CREATE_ORGANIZATION: "Failed to create organization",

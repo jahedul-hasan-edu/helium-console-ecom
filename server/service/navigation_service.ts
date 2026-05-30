@@ -7,7 +7,7 @@ import { tenantRolePagePermissions } from "server/db/schemas/tenantRolePagePermi
 import { tenantRolePages } from "server/db/schemas/tenantRolePages";
 import { RoleName } from "server/shared/constants";
 import { authService } from "./auth_service";
-import { HIDDEN_NAVIGATION_PAGE_SLUGS, STATIC_PAGE_DEFINITIONS } from "server/shared/utils/authPages";
+import { STATIC_PAGE_DEFINITIONS } from "server/shared/utils/authPages";
 import type { AuthenticatedRequest } from "server/shared/utils/requestContext";
 
 export interface NavigationItem {
@@ -28,10 +28,8 @@ export interface NavigationItem {
   children?: NavigationItem[];
 }
 
-const hiddenNavigationSlugs = new Set<string>(HIDDEN_NAVIGATION_PAGE_SLUGS);
-
 function filterNavigationItems<T extends { slug: string }>(items: T[]): T[] {
-  return items.filter((item) => !hiddenNavigationSlugs.has(item.slug));
+  return items;
 }
 
 function buildNavigationTree(items: NavigationItem[]): NavigationItem[] {

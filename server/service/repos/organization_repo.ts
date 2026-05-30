@@ -31,6 +31,7 @@ export interface IStorageOrganization {
   ): Promise<OrganizationResponseDTO>;
   deleteOrganization(id: string, tenantId: string): Promise<void>;
   checkDuplicateTitle(title: string, tenantId: string, excludeId?: string): Promise<boolean>;
+  hasOrganizationForTenant(tenantId: string, excludeId?: string): Promise<boolean>;
 }
 
 export class StorageOrganization implements IStorageOrganization {
@@ -166,7 +167,6 @@ export class StorageOrganization implements IStorageOrganization {
       userIp: updates.userIp,
     };
 
-    if (updates.tenantId !== undefined) updateData.tenantId = updates.tenantId;
     if (updates.title !== undefined) updateData.title = updates.title;
     if (updates.logoTitle !== undefined) updateData.logoTitle = updates.logoTitle;
     if (updates.phone !== undefined) updateData.phone = updates.phone;
@@ -206,6 +206,21 @@ export class StorageOrganization implements IStorageOrganization {
       eq(organizations.tenantId, tenantId),
       sql`lower(${organizations.title}) = lower(${title})`,
     ];
+
+    if (excludeId) {
+      conditions.push(ne(organizations.id, excludeId));
+    }
+
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(organizations)
+      .where(and(...conditions));
+
+    return Number(result?.count || 0) > 0;
+  }
+
+  async hasOrganizationForTenant(tenantId: string, excludeId?: string): Promise<boolean> {
+    const conditions = [eq(organizations.tenantId, tenantId)];
 
     if (excludeId) {
       conditions.push(ne(organizations.id, excludeId));

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Search, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -107,14 +107,7 @@ export default function TenantSubscriptions() {
         if (col.key === 'isActive') {
           return {
             ...col,
-            render: (value: any) => (
-              <Badge 
-                variant={value ? "default" : "destructive"} 
-                className={value ? "bg-green-500 hover:bg-green-600" : ""}
-              >
-                {value ? "Active" : "Inactive"}
-              </Badge>
-            )
+            render: (value: any) => <StatusBadge status={value ? "active" : "inactive"} />
           };
         }
         return col;

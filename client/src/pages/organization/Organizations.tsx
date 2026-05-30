@@ -1,18 +1,12 @@
 import { useMemo, useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PaginatedDataTable } from "@/components/PaginatedDataTable";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ActionButtons } from "@/components/ActionButtons";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization, useOrganizations, useCreateOrganization, useDeleteOrganization, useUpdateOrganization } from "@/hooks/use-Organization";
-import { useTenants } from "@/hooks/use-Tenant";
 import type { Organization } from "@/models/Organization";
 import { CreateOrganizationModal } from "@/pages/organization/CreateOrganizationModal";
 import { DeleteOrganizationModal } from "@/pages/organization/DeleteOrganizationModal";
@@ -24,14 +18,13 @@ import {
   SORT_CONFIG,
   SortField,
   SortOrder,
-  TENANT_FILTER_ALL_VALUE,
   TOTAL_PAGES,
 } from "@/pages/organization";
 import { Plus, Search } from "lucide-react";
 
 export default function Organizations() {
+  const { isSuperAdmin, selectedTenantId, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTenantId, setSelectedTenantId] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<SortField | undefined>(undefined);
@@ -41,14 +34,17 @@ export default function Organizations() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const { data: tenantsData, isLoading: tenantsLoading } = useTenants({ pageSize: 1000 });
+  const activeTenantId = selectedTenantId || user?.tenantId || undefined;
+  const tenantScopeReady = !isSuperAdmin || !!activeTenantId;
+  const createNeedsTenantSelection = isSuperAdmin && !activeTenantId;
+
   const { data: organizationsData, isLoading } = useOrganizations({
     page: currentPage,
     pageSize,
     search: searchTerm,
     sortBy,
     sortOrder,
-    tenantId: selectedTenantId || undefined,
+    tenantId: activeTenantId,
   });
 
   const selectedOrganizationFromList = useMemo(
@@ -56,7 +52,7 @@ export default function Organizations() {
     [organizationsData?.items, selectedOrganizationId]
   );
 
-  const selectedOrganizationTenantId = selectedOrganizationFromList?.tenantId || selectedTenantId || undefined;
+  const selectedOrganizationTenantId = selectedOrganizationFromList?.tenantId || activeTenantId;
   const { data: selectedOrganizationFromApi } = useOrganization(selectedOrganizationId, selectedOrganizationTenantId);
 
   const selectedOrganization = selectedOrganizationFromList || selectedOrganizationFromApi;
@@ -106,14 +102,7 @@ export default function Organizations() {
         if (column.key === "isActive") {
           return {
             ...column,
-            render: (value: boolean | null) => (
-              <Badge
-                variant={value ? "default" : "destructive"}
-                className={value ? "bg-green-500 hover:bg-green-600" : ""}
-              >
-                {value ? "Active" : "Inactive"}
-              </Badge>
-            ),
+            render: (value: boolean | null) => <StatusBadge status={value ? "active" : "inactive"} />,
           };
         }
 
@@ -131,53 +120,36 @@ export default function Organizations() {
           <h1 className="text-3xl font-bold tracking-tight">{ORGANIZATION_PAGE.TITLE}</h1>
           <p className="mt-1 text-muted-foreground">{ORGANIZATION_PAGE.SUBTITLE}</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+        <Button onClick={() => setShowCreateModal(true)} className="gap-2" disabled={!tenantScopeReady}>
           <Plus className="h-4 w-4" />
           {BUTTON_LABELS.ADD_ORGANIZATION}
         </Button>
       </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row">
-        <div className="w-full sm:w-56">
-          <Select
-            value={selectedTenantId || TENANT_FILTER_ALL_VALUE}
-            onValueChange={(value) => {
-              setSelectedTenantId(value === TENANT_FILTER_ALL_VALUE ? "" : value);
-              setCurrentPage(1);
-            }}
-            disabled={tenantsLoading}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={ORGANIZATION_PAGE.TENANT_FILTER_PLACEHOLDER} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={TENANT_FILTER_ALL_VALUE}>{ORGANIZATION_PAGE.TENANT_FILTER_PLACEHOLDER}</SelectItem>
-              {tenantsData?.items?.map((tenant) => (
-                <SelectItem key={tenant.id} value={tenant.id}>
-                  {tenant.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {!tenantScopeReady ? (
+        <Alert>
+          <AlertTitle>Tenant required</AlertTitle>
+          <AlertDescription>Select a tenant from the top navigation to view or create organizations.</AlertDescription>
+        </Alert>
+      ) : null}
 
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={searchTerm}
-            className="pl-9"
-            placeholder={ORGANIZATION_PAGE.SEARCH_PLACEHOLDER}
-            onChange={(event) => {
-              setSearchTerm(event.target.value);
-              setCurrentPage(1);
-            }}
-          />
-        </div>
+      <div className="relative flex-1">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          value={searchTerm}
+          className="pl-9"
+          placeholder={ORGANIZATION_PAGE.SEARCH_PLACEHOLDER}
+          onChange={(event) => {
+            setSearchTerm(event.target.value);
+            setCurrentPage(1);
+          }}
+          disabled={!tenantScopeReady}
+        />
       </div>
 
       <PaginatedDataTable
         columns={columns}
-        data={organizationsData?.items}
+        data={tenantScopeReady ? organizationsData?.items : []}
         isLoading={isLoading}
         sortBy={sortBy}
         sortOrder={sortOrder}
@@ -196,9 +168,9 @@ export default function Organizations() {
           />
         )}
         currentPage={currentPage}
-        totalPages={totalPages}
+        totalPages={tenantScopeReady ? totalPages : 0}
         pageSize={pageSize}
-        totalItems={organizationsData?.total || 0}
+        totalItems={tenantScopeReady ? organizationsData?.total || 0 : 0}
         onPageChange={setCurrentPage}
         onPageSizeChange={(size) => {
           setPageSize(size);
@@ -209,6 +181,8 @@ export default function Organizations() {
       <CreateOrganizationModal
         isOpen={showCreateModal}
         isLoading={createMutation.isPending}
+        tenantId={activeTenantId}
+        requireTenantSelection={createNeedsTenantSelection}
         onClose={() => setShowCreateModal(false)}
         onSubmit={async (data) => {
           await createMutation.mutateAsync(data);
@@ -232,7 +206,7 @@ export default function Organizations() {
           await updateMutation.mutateAsync({
             id: selectedOrganizationId,
             data,
-            currentTenantId: selectedOrganization?.tenantId || selectedTenantId || undefined,
+            currentTenantId: selectedOrganization?.tenantId || activeTenantId,
           });
 
           setShowEditModal(false);
@@ -255,7 +229,7 @@ export default function Organizations() {
 
           await deleteMutation.mutateAsync({
             id: selectedOrganizationId,
-            tenantId: selectedOrganization?.tenantId || selectedTenantId || undefined,
+            tenantId: selectedOrganization?.tenantId || activeTenantId,
           });
 
           setShowDeleteModal(false);

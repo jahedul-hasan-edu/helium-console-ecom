@@ -55,12 +55,6 @@ function validateCommonOrganizationFields(
 ) {
   const errors: ValidationError[] = [];
 
-  if (!isUpdate || data.tenantId !== undefined) {
-    if (!data.tenantId || data.tenantId.trim() === "") {
-      errors.push({ field: "tenantId", message: ORGANIZATION_FORM.VALIDATION.TENANT_REQUIRED });
-    }
-  }
-
   if (!isUpdate || data.title !== undefined) {
     pushRequiredStringError(
       errors,
