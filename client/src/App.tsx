@@ -24,6 +24,7 @@ import PopupAds from "./pages/popupAd/PopupAds";
 import Pages from "@/pages/page/Pages";
 import PagePermissions from "@/pages/pagePermission/PagePermissions";
 import Roles from "@/pages/role/Roles";
+import UserSettings from "@/pages/userSettings/UserSettings";
 import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
 import TwoFactorVerify from "@/pages/auth/TwoFactorVerify";
@@ -69,6 +70,12 @@ function Router() {
       </Route>
       <Route path="/admin/tenant-subscriptions">
         <AuthShell><TenantSubscriptions /></AuthShell>
+      </Route>
+      <Route path="/admin/tenant-subscriptions/user-settings">
+        <Redirect to="/admin/user-settings" />
+      </Route>
+      <Route path="/admin/user-settings">
+        <AuthShell><UserSettings /></AuthShell>
       </Route>
       <Route path="/admin/users">
         <AuthShell><Users /></AuthShell>

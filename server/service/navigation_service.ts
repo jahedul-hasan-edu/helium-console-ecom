@@ -7,7 +7,7 @@ import { tenantRolePagePermissions } from "server/db/schemas/tenantRolePagePermi
 import { tenantRolePages } from "server/db/schemas/tenantRolePages";
 import { RoleName } from "server/shared/constants";
 import { authService } from "./auth_service";
-import { STATIC_PAGE_DEFINITIONS } from "server/shared/utils/authPages";
+import { HIDDEN_NAVIGATION_PAGE_SLUGS, STATIC_PAGE_DEFINITIONS } from "server/shared/utils/authPages";
 import type { AuthenticatedRequest } from "server/shared/utils/requestContext";
 
 export interface NavigationItem {
@@ -26,6 +26,12 @@ export interface NavigationItem {
     canPreview: boolean;
   };
   children?: NavigationItem[];
+}
+
+const hiddenNavigationSlugs = new Set<string>(HIDDEN_NAVIGATION_PAGE_SLUGS);
+
+function filterNavigationItems<T extends { slug: string }>(items: T[]): T[] {
+  return items.filter((item) => !hiddenNavigationSlugs.has(item.slug));
 }
 
 function buildNavigationTree(items: NavigationItem[]): NavigationItem[] {
@@ -54,7 +60,7 @@ function buildNavigationTree(items: NavigationItem[]): NavigationItem[] {
 }
 
 function fallbackNavigation(): NavigationItem[] {
-  return STATIC_PAGE_DEFINITIONS.map((item) => ({
+  return filterNavigationItems(STATIC_PAGE_DEFINITIONS).map((item) => ({
     id: item.slug,
     title: item.title,
     slug: item.slug,
@@ -92,7 +98,7 @@ export const navigationService = {
       }
 
       return buildNavigationTree(
-        pageRows.map((page) => ({
+        filterNavigationItems(pageRows).map((page) => ({
           id: page.id,
           title: page.title,
           slug: page.slug,
@@ -134,7 +140,7 @@ export const navigationService = {
         .orderBy(asc(pages.sortOrder));
 
       return buildNavigationTree(
-        rows.map((row) => ({
+        filterNavigationItems(rows).map((row) => ({
           ...row,
           permissions: {
             canView: true,
@@ -185,7 +191,7 @@ export const navigationService = {
       .orderBy(asc(pages.sortOrder));
 
     return buildNavigationTree(
-      rows.map((row) => ({
+      filterNavigationItems(rows).map((row) => ({
         id: row.id,
         title: row.title,
         slug: row.slug,

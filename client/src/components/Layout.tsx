@@ -1,30 +1,13 @@
 import { Link, useLocation } from "wouter";
 import { 
   LayoutDashboard, 
-  Users, 
   ShoppingBag, 
   ShoppingCart,
   Calendar, 
   Briefcase, 
-  Building2,
-  Tag, 
   Menu,
-  Search,
   LogOut,
-  Tags,
-  Layers,
-  Package,
-  HelpCircle,
-  Settings,
-  Building,
-  FolderClosed,
-  FolderOpen,
-  FolderTree,
-  Home,
-  Megaphone,
-  Shield,
-  FileText,
-  type LucideIcon,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +24,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { getAdminIcon } from "@/lib/adminIcons";
 import { useNavigation } from "@/hooks/use-Navigation";
 import type { NavigationItem } from "@/models/Navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -53,35 +37,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const iconMap: Record<string, LucideIcon> = {
-  Briefcase,
-  Building,
-  Building2,
-  Calendar,
-  FileText,
-  FolderClosed,
-  FolderOpen,
-  FolderTree,
-  HelpCircle,
-  Home,
-  LayoutDashboard,
-  Layers,
-  Megaphone,
-  Package,
-  Search,
-  Settings,
-  Shield,
-  ShoppingBag,
-  ShoppingCart,
-  Tag,
-  Tags,
-  Users,
-};
-
-function flattenNavigation(items: NavigationItem[]): NavigationItem[] {
-  return items.flatMap((item) => [item, ...(item.children ? flattenNavigation(item.children) : [])]);
-}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, navigate] = useLocation();
@@ -101,7 +56,34 @@ export function Layout({ children }: { children: React.ReactNode }) {
   });
 
   const sidebarItems = navigation.length > 0 ? navigation : [];
-  const allNavigationItems = flattenNavigation(sidebarItems);
+
+  const renderNavItems = (items: NavigationItem[], depth: number = 0): React.ReactNode => {
+    return items.map((item) => {
+      const Icon = getAdminIcon(item.icon);
+      const isActive = location === item.routePath || (item.routePath !== "/admin" && location.startsWith(item.routePath));
+
+      return (
+        <div key={item.id} className={cn("space-y-1", depth > 0 && "ml-6 border-l border-border/60 pl-3")}>
+          <Link href={item.routePath}>
+            <div
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer group",
+                isActive
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+              onClick={() => setIsMobileOpen(false)}
+            >
+              <Icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} />
+              <span className="truncate">{item.title}</span>
+            </div>
+          </Link>
+
+          {item.children && item.children.length > 0 && renderNavItems(item.children, depth + 1)}
+        </div>
+      );
+    });
+  };
 
   const NavContent = () => (
     <>
@@ -112,26 +94,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <span className="text-xl font-bold font-display tracking-tight">Helium Console</span>
       </div>
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-        {sidebarItems.map((item) => {
-          const Icon = iconMap[item.icon || "FileText"] || FileText;
-          const isActive = location === item.routePath || (item.routePath !== '/admin' && location.startsWith(item.routePath));
-          return (
-            <Link key={item.id} href={item.routePath}>
-              <div
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer group",
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-                onClick={() => setIsMobileOpen(false)}
-              >
-                <Icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} />
-                {item.title}
-              </div>
-            </Link>
-          );
-        })}
+        {renderNavItems(sidebarItems)}
       </nav>
     </>
   );

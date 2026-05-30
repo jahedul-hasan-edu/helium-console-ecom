@@ -248,21 +248,82 @@ export class AuthService {
       await db.insert(roles).values(missingRoles);
     }
 
-    const existingPages = await db.select({ slug: pages.slug }).from(pages);
-    const existingPageSlugs = new Set(existingPages.map((page) => page.slug));
-    const missingPages = STATIC_PAGE_DEFINITIONS.filter((page) => !existingPageSlugs.has(page.slug));
+    const existingPages = await db
+      .select({
+        id: pages.id,
+        title: pages.title,
+        slug: pages.slug,
+        icon: pages.icon,
+        routePath: pages.routePath,
+        sortOrder: pages.sortOrder,
+        parentId: pages.parentId,
+      })
+      .from(pages);
+    const pageBySlug = new Map(existingPages.map((page) => [page.slug, page]));
+    let pendingPages = STATIC_PAGE_DEFINITIONS.filter((page) => !pageBySlug.has(page.slug));
 
-    if (missingPages.length > 0) {
-      await db.insert(pages).values(
-        missingPages.map((page) => ({
-          title: page.title,
-          slug: page.slug,
-          icon: page.icon,
-          routePath: page.routePath,
-          sortOrder: page.sortOrder,
-          parentId: page.parentId,
-        }))
-      );
+    while (pendingPages.length > 0) {
+      const readyPages = pendingPages.filter((page) => !page.parentId || pageBySlug.has(page.parentId));
+      if (readyPages.length === 0) {
+        throw new Error("Unable to resolve static page parent relationships");
+      }
+
+      const insertedPages = await db
+        .insert(pages)
+        .values(
+          readyPages.map((page) => ({
+            title: page.title,
+            slug: page.slug,
+            icon: page.icon,
+            routePath: page.routePath,
+            sortOrder: page.sortOrder,
+            parentId: page.parentId ? pageBySlug.get(page.parentId)?.id ?? null : null,
+          }))
+        )
+        .returning({
+          id: pages.id,
+          title: pages.title,
+          slug: pages.slug,
+          icon: pages.icon,
+          routePath: pages.routePath,
+          sortOrder: pages.sortOrder,
+          parentId: pages.parentId,
+        });
+
+      for (const page of insertedPages) {
+        pageBySlug.set(page.slug, page);
+      }
+
+      pendingPages = pendingPages.filter((page) => !readyPages.some((readyPage) => readyPage.slug === page.slug));
+    }
+
+    for (const definition of STATIC_PAGE_DEFINITIONS) {
+      const existingPage = pageBySlug.get(definition.slug);
+      if (!existingPage) {
+        continue;
+      }
+
+      const resolvedParentId = definition.parentId ? pageBySlug.get(definition.parentId)?.id ?? null : null;
+      if (
+        existingPage.title === definition.title &&
+        existingPage.icon === definition.icon &&
+        existingPage.routePath === definition.routePath &&
+        existingPage.sortOrder === definition.sortOrder &&
+        existingPage.parentId === resolvedParentId
+      ) {
+        continue;
+      }
+
+      await db
+        .update(pages)
+        .set({
+          title: definition.title,
+          icon: definition.icon,
+          routePath: definition.routePath,
+          sortOrder: definition.sortOrder,
+          parentId: resolvedParentId,
+        })
+        .where(eq(pages.id, existingPage.id));
     }
 
     await this.syncStaticTenantAccess();

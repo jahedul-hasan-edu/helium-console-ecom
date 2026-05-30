@@ -17,6 +17,7 @@ export const createRoleSchema = z.object({
   displayName: z.string().trim().min(2, "Display name is required"),
   description: z.string().trim().max(500).optional().nullable(),
   isActive: z.boolean().optional(),
+  tenantId: z.string().uuid().optional(),
 }).strict();
 
 export const updateRoleSchema = createRoleSchema.partial().strict();

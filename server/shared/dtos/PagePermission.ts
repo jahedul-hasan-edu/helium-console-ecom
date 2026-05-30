@@ -12,6 +12,7 @@ export const pagePermissionEntrySchema = z.object({
 });
 
 export const updatePagePermissionsSchema = z.object({
+  tenantId: z.string().uuid().optional(),
   entries: z.array(pagePermissionEntrySchema).min(1, "At least one page permission entry is required"),
 }).strict();
 
