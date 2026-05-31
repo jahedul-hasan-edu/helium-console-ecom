@@ -7,7 +7,7 @@ import { SORT_ORDERS } from "@/lib/constants";
 import { ListResponse, QueryParams } from "@/lib/interface";
 
 // HOME SETTINGS - Get list with pagination, sorting, and search
-export function useHomeSettings(params?: QueryParams) {
+export function useHomeSettings(params?: QueryParams, enabled: boolean = true) {
   const queryParams = new URLSearchParams();
   if (params?.page) queryParams.append("page", params.page.toString());
   if (params?.pageSize) queryParams.append("pageSize", params.pageSize.toString());
@@ -25,6 +25,7 @@ export function useHomeSettings(params?: QueryParams) {
       apiService.get<ListResponse<HomeSetting>>(url, {
         showSuccessToast: false,
       }),
+    enabled,
   });
 }
 

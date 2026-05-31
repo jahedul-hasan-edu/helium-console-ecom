@@ -3,16 +3,10 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,7 +15,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { getFieldError, ValidationError } from "@/lib/formValidator";
 import { FormValidator } from "./formValidator";
-import { useTenants } from "@/hooks/use-Tenant";
 import { FAQ_FORM } from "@/pages/faq";
 
 interface CreateFaqModalProps {
@@ -29,6 +22,7 @@ interface CreateFaqModalProps {
   onClose: () => void;
   onSubmit: (data: any) => Promise<void>;
   isLoading: boolean;
+  tenantId?: string;
 }
 
 export function CreateFaqModal({
@@ -36,6 +30,7 @@ export function CreateFaqModal({
   onClose,
   onSubmit,
   isLoading,
+  tenantId,
 }: CreateFaqModalProps) {
   const [formData, setFormData] = useState({
     title: "",
@@ -45,9 +40,6 @@ export function CreateFaqModal({
   });
 
   const [errors, setErrors] = useState<ValidationError[]>([]);
-  const { data: tenantsData, isLoading: tenantsLoading } = useTenants({
-    pageSize: 1000,
-  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -67,15 +59,6 @@ export function CreateFaqModal({
     setErrors(errors.filter((e) => e.field !== name));
   };
 
-  const handleTenantChange = (tenantId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tenantId,
-    }));
-    // Clear error for this field
-    setErrors(errors.filter((e) => e.field !== "tenantId"));
-  };
-
   const handleCheckboxChange = (name: string, checked: boolean) => {
     setFormData((prev) => ({
       ...prev,
@@ -87,14 +70,20 @@ export function CreateFaqModal({
     e.preventDefault();
 
     // Validate form
-    const validation = FormValidator.validateCreateFaq(formData);
+    const validation = FormValidator.validateCreateFaq({
+      ...formData,
+      tenantId: tenantId || formData.tenantId,
+    });
     if (!validation.isValid) {
       setErrors(validation.errors);
       return;
     }
 
     try {
-      await onSubmit(formData);
+      await onSubmit({
+        ...formData,
+        tenantId: tenantId || formData.tenantId,
+      });
 
       // Reset form on success
       setFormData({
@@ -111,38 +100,16 @@ export function CreateFaqModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-hidden p-0">
+        <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>Create New FAQ</DialogTitle>
           <DialogDescription>
             Add a new frequently asked question and its answer.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Tenant Dropdown */}
-          <div className="space-y-2">
-            <Label htmlFor="tenantId">{FAQ_FORM.TENANT_LABEL}</Label>
-            <Select value={formData.tenantId} onValueChange={handleTenantChange} disabled={isLoading || tenantsLoading}>
-              <SelectTrigger id="tenantId" className={getFieldError("tenantId", errors) ? "border-red-500" : ""}>
-                <SelectValue placeholder={FAQ_FORM.TENANT_PLACEHOLDER} />
-              </SelectTrigger>
-              <SelectContent>
-                {tenantsData?.items?.map((tenant) => (
-                  <SelectItem key={tenant.id} value={tenant.id}>
-                    {tenant.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {getFieldError("tenantId", errors) && (
-              <div className="flex items-center gap-2 text-red-500 text-sm">
-                <AlertCircle className="h-4 w-4" />
-                {getFieldError("tenantId", errors)}
-              </div>
-            )}
-          </div>
-
+        <form onSubmit={handleSubmit} className="flex max-h-[calc(90vh-88px)] flex-col">
+          <div className="space-y-4 overflow-y-auto px-6 py-4">
           {/* Title Field */}
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
@@ -197,9 +164,9 @@ export function CreateFaqModal({
               {FAQ_FORM.ACTIVE_LABEL}
             </Label>
           </div>
+          </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-end gap-2 pt-4">
+          <DialogFooter className="border-t px-6 py-4">
             <Button
               type="button"
               variant="outline"
@@ -224,7 +191,7 @@ export function CreateFaqModal({
                 </>
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

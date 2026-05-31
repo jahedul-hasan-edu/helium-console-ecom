@@ -10,16 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useTenants } from "@/hooks/use-Tenant";
 import { getFieldError, ValidationError } from "@/lib/formValidator";
 import { CreateOrganizationRequest } from "@/models/Organization";
 import {
@@ -70,8 +62,6 @@ export function CreateOrganizationModal({
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
   const [errors, setErrors] = useState<ValidationError[]>([]);
-  const [selectedTenantId, setSelectedTenantId] = useState(tenantId || "");
-  const { data: tenantsData, isLoading: tenantsLoading } = useTenants({ pageSize: 100 });
 
   const setFieldValue = (field: keyof OrganizationFormValues, value: string | boolean) => {
     setFormData((prev) => ({
@@ -110,13 +100,12 @@ export function CreateOrganizationModal({
     setSelectedImage(null);
     setImagePreview("");
     setErrors([]);
-    setSelectedTenantId(tenantId || "");
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    const effectiveTenantId = tenantId || selectedTenantId;
+    const effectiveTenantId = tenantId;
 
     if (requireTenantSelection && !effectiveTenantId) {
       setErrors((prev) => [
@@ -128,7 +117,7 @@ export function CreateOrganizationModal({
 
     const validation = FormValidator.validateCreateOrganization({
       ...formData,
-      tenantId: effectiveTenantId,
+      tenantId: effectiveTenantId || undefined,
       image: selectedImage,
     });
 
@@ -163,37 +152,6 @@ export function CreateOrganizationModal({
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
-            {requireTenantSelection ? (
-              <div className="space-y-2 md:col-span-2">
-                <Label className="text-sm font-medium">{ORGANIZATION_FORM.TENANT_LABEL}</Label>
-                <Select
-                  value={selectedTenantId}
-                  disabled={isLoading || tenantsLoading}
-                  onValueChange={(value) => {
-                    setSelectedTenantId(value);
-                    setErrors((prev) => prev.filter((error) => error.field !== "tenantId"));
-                  }}
-                >
-                  <SelectTrigger className={getFieldError("tenantId", errors) ? "border-destructive focus:ring-destructive" : ""}>
-                    <SelectValue placeholder={ORGANIZATION_FORM.TENANT_PLACEHOLDER} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tenantsData?.items?.map((tenant) => (
-                      <SelectItem key={tenant.id} value={tenant.id}>
-                        {tenant.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {getFieldError("tenantId", errors) ? (
-                  <div className="flex items-center gap-2 text-sm text-destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>{getFieldError("tenantId", errors)}</span>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
             {basicFieldConfig.map((field) => (
               <div key={field.key} className="space-y-2">
                 <Label htmlFor={field.key} className="text-sm font-medium">

@@ -5,6 +5,7 @@ export const roleResponseSchema = z.object({
   name: z.string(),
   displayName: z.string(),
   description: z.string().nullable().optional(),
+  tenantId: z.string().uuid().nullable().optional(),
   isActive: z.boolean(),
   isSystem: z.boolean(),
   assignedUserCount: z.number(),

@@ -6,29 +6,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, AlertCircle, CheckCircle2, Upload, X, Image as ImageIcon } from "lucide-react";
 import { getFieldError, ValidationError, FormValidator } from "@/pages/popupAd/formValidator";
-import { useTenants } from "@/hooks/use-Tenant";
 import { POPUP_AD_FORM, IMAGE_CONFIG } from "@/pages/popupAd";
 import { CreatePopupAdRequest } from "@/models/PopupAd";
-import { Tenant } from "@/models/Tenant";
 
 interface CreatePopupAdModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: CreatePopupAdRequest) => Promise<void>;
   isLoading: boolean;
+  tenantId?: string;
 }
 
 export function CreatePopupAdModal({
@@ -36,6 +28,7 @@ export function CreatePopupAdModal({
   onClose,
   onSubmit,
   isLoading,
+  tenantId,
 }: CreatePopupAdModalProps) {
   const [formData, setFormData] = useState<CreatePopupAdRequest>({
     title: "",
@@ -46,9 +39,6 @@ export function CreatePopupAdModal({
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [errors, setErrors] = useState<ValidationError[]>([]);
-  const { data: tenantsData } = useTenants();
-
-  const tenants = tenantsData?.items || [];
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -86,6 +76,7 @@ export function CreatePopupAdModal({
   const validateForm = () => {
     const validationErrors = FormValidator.validateCreatePopupAd({
       ...formData,
+      tenantId: tenantId || formData.tenantId,
       image: selectedImage || undefined,
     });
     setErrors(validationErrors);
@@ -104,11 +95,6 @@ export function CreatePopupAdModal({
     setErrors((prev) => prev.filter((e) => e.field !== name));
   };
 
-  const handleTenantChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, tenantId: value }));
-    setErrors((prev) => prev.filter((e) => e.field !== "tenantId"));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -116,6 +102,7 @@ export function CreatePopupAdModal({
     try {
       const submitData: CreatePopupAdRequest = {
         ...formData,
+        tenantId: tenantId || formData.tenantId,
         image: selectedImage || undefined,
       };
       await onSubmit(submitData);
@@ -140,38 +127,6 @@ export function CreatePopupAdModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Tenant Select */}
-          <div className="space-y-2">
-            <Label htmlFor="tenantId" className="text-sm font-medium">
-              {POPUP_AD_FORM.tenantLabel} *
-            </Label>
-            <Select value={formData.tenantId} onValueChange={handleTenantChange}>
-              <SelectTrigger
-                id="tenantId"
-                className={
-                  getFieldError("tenantId", errors)
-                    ? "border-red-500 focus:ring-red-500"
-                    : ""
-                }
-              >
-                <SelectValue placeholder={POPUP_AD_FORM.tenantPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {tenants.map((tenant: Tenant) => (
-                  <SelectItem key={tenant.id} value={tenant.id}>
-                    {tenant.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {getFieldError("tenantId", errors) && (
-              <div className="flex items-center gap-2 text-sm text-red-500">
-                <AlertCircle className="h-4 w-4" />
-                <span>{getFieldError("tenantId", errors)}</span>
-              </div>
-            )}
-          </div>
-
           {/* Title Input */}
           <div className="space-y-2">
             <Label htmlFor="title" className="text-sm font-medium">

@@ -5,7 +5,7 @@ import { QueryParams, ListResponse } from "@/lib/interface";
 import { PopupAd } from "@/models/PopupAd";
 
 // Get list with pagination, sorting, and search
-export function usePopupAds(params?: QueryParams) {
+export function usePopupAds(params?: QueryParams, enabled: boolean = true) {
   const queryParams = new URLSearchParams();
   if (params?.page) queryParams.append("page", params.page.toString());
   if (params?.pageSize) queryParams.append("pageSize", params.pageSize.toString());
@@ -23,18 +23,19 @@ export function usePopupAds(params?: QueryParams) {
       apiService.get<ListResponse<PopupAd>>(url, {
         showSuccessToast: false,
       }),
+    enabled,
   });
 }
 
 // Get single Popup Ad by ID
-export function usePopupAd(id: string | null) {
+export function usePopupAd(id: string | null, enabled: boolean = true) {
   return useQuery({
     queryKey: [api.popupAds.get(id || "").path],
     queryFn: () =>
       apiService.get<PopupAd>(api.popupAds.get(id!).path, {
         showSuccessToast: false,
       }),
-    enabled: !!id,
+    enabled: !!id && enabled,
   });
 }
 

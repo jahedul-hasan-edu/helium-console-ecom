@@ -134,7 +134,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           <div className="flex items-center gap-2 sm:gap-4">
             {isSuperAdmin && (
-              <div className="hidden md:block w-52">
+              <div className="w-36 sm:w-52">
                 <Select value={selectedTenantId || "all"} onValueChange={(value) => setSelectedTenantId(value === "all" ? null : value)}>
                   <SelectTrigger className="bg-muted/30 border-transparent">
                     <SelectValue placeholder="All tenants" />

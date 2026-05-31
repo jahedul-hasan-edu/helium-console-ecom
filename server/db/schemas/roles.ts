@@ -1,5 +1,6 @@
 import { boolean, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { tenants } from "./tenants";
 
 export const roles = pgTable(
   "roles",
@@ -8,6 +9,7 @@ export const roles = pgTable(
     name: text("name").notNull(),
     displayName: text("display_name").notNull(),
     description: text("description"),
+    tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
     isActive: boolean("is_active").notNull().default(true),
     createdBy: uuid("created_by"),
     updatedBy: uuid("updated_by"),

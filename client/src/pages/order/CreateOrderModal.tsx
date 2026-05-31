@@ -20,7 +20,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { getFieldError, ValidationError } from "@/lib/formValidator";
-import { useTenants } from "@/hooks/use-Tenant";
 import { CreateOrderRequest } from "@/models/Order";
 import {
   BUTTON_LABELS,
@@ -36,6 +35,7 @@ interface CreateOrderModalProps {
   onClose: () => void;
   onSubmit: (data: CreateOrderRequest) => Promise<void>;
   isLoading: boolean;
+  tenantId?: string;
 }
 
 const basicFieldConfig: Array<{
@@ -54,10 +54,9 @@ const basicFieldConfig: Array<{
   { key: "timeZone", label: ORDER_FORM.TIME_ZONE_LABEL, placeholder: ORDER_FORM.TIME_ZONE_PLACEHOLDER },
 ];
 
-export function CreateOrderModal({ isOpen, onClose, onSubmit, isLoading }: CreateOrderModalProps) {
+export function CreateOrderModal({ isOpen, onClose, onSubmit, isLoading, tenantId }: CreateOrderModalProps) {
   const [formData, setFormData] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
   const [errors, setErrors] = useState<ValidationError[]>([]);
-  const { data: tenantsData, isLoading: tenantsLoading } = useTenants({ pageSize: 1000 });
 
   const setFieldValue = (field: keyof OrderFormValues, value: string | boolean) => {
     setFormData((previous) => ({
@@ -75,7 +74,10 @@ export function CreateOrderModal({ isOpen, onClose, onSubmit, isLoading }: Creat
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    const validation = FormValidator.validateCreateOrder(formData);
+    const validation = FormValidator.validateCreateOrder({
+      ...formData,
+      tenantId: tenantId || formData.tenantId,
+    });
     if (!validation.isValid) {
       setErrors(validation.errors);
       return;
@@ -84,6 +86,7 @@ export function CreateOrderModal({ isOpen, onClose, onSubmit, isLoading }: Creat
     try {
       await onSubmit({
         ...formData,
+        tenantId: tenantId || formData.tenantId,
       });
 
       resetForm();
@@ -112,32 +115,6 @@ export function CreateOrderModal({ isOpen, onClose, onSubmit, isLoading }: Creat
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">{ORDER_FORM.TENANT_LABEL}</Label>
-              <Select
-                value={formData.tenantId}
-                disabled={isLoading || tenantsLoading}
-                onValueChange={(value) => setFieldValue("tenantId", value)}
-              >
-                <SelectTrigger className={getFieldError("tenantId", errors) ? "border-destructive focus:ring-destructive" : ""}>
-                  <SelectValue placeholder={ORDER_FORM.TENANT_PLACEHOLDER} />
-                </SelectTrigger>
-                <SelectContent>
-                  {tenantsData?.items?.map((tenant) => (
-                    <SelectItem key={tenant.id} value={tenant.id}>
-                      {tenant.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {getFieldError("tenantId", errors) ? (
-                <div className="flex items-center gap-2 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>{getFieldError("tenantId", errors)}</span>
-                </div>
-              ) : null}
-            </div>
-
             <div className="space-y-2">
               <Label className="text-sm font-medium">{ORDER_FORM.STATUS_LABEL}</Label>
               <Select

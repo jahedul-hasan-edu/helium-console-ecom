@@ -6,13 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,7 +15,6 @@ import { Loader2, AlertCircle, CheckCircle2, Upload, X } from "lucide-react";
 import { getFieldError, ValidationError } from "@/lib/formValidator";
 import { HomeSetting } from "@/models/HomeSetting";
 import { FormValidator } from "./formValidator";
-import { useTenants } from "@/hooks/use-Tenant";
 import { HOME_SETTING_FORM } from "@/pages/homeSetting";
 
 interface EditHomeSettingModalProps {
@@ -31,6 +23,7 @@ interface EditHomeSettingModalProps {
   onSubmit: (data: any) => Promise<void>;
   isLoading: boolean;
   homeSetting?: HomeSetting;
+  tenantId?: string;
 }
 
 export function EditHomeSettingModal({
@@ -39,6 +32,7 @@ export function EditHomeSettingModal({
   onSubmit,
   isLoading,
   homeSetting,
+  tenantId,
 }: EditHomeSettingModalProps) {
   const [formData, setFormData] = useState({
     title: "",
@@ -52,10 +46,6 @@ export function EditHomeSettingModal({
   const [existingImages, setExistingImages] = useState<any[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [errors, setErrors] = useState<ValidationError[]>([]);
-  
-  const { data: tenantsData, isLoading: tenantsLoading } = useTenants({
-    pageSize: 1000,
-  });
 
   useEffect(() => {
     if (homeSetting && isOpen) {
@@ -81,14 +71,6 @@ export function EditHomeSettingModal({
     }));
     // Clear error for this field when user starts typing
     setErrors(errors.filter((e) => e.field !== name));
-  };
-
-  const handleTenantChange = (tenantId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tenantId,
-    }));
-    setErrors(errors.filter((e) => e.field !== "tenantId"));
   };
 
   const handleCheckboxChange = (name: string, checked: boolean) => {
@@ -145,7 +127,7 @@ export function EditHomeSettingModal({
       const submitData: any = {
         title: formData.title,
         subTitle: formData.subTitle,
-        tenantId: formData.tenantId,
+        tenantId: tenantId || formData.tenantId,
         isActive: formData.isActive,
         images,
       };
@@ -172,29 +154,6 @@ export function EditHomeSettingModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Tenant Dropdown */}
-          <div className="space-y-2">
-            <Label htmlFor="tenantId">{HOME_SETTING_FORM.TENANT_LABEL}</Label>
-            <Select value={formData.tenantId} onValueChange={handleTenantChange} disabled={isLoading || tenantsLoading}>
-              <SelectTrigger id="tenantId" className={getFieldError("tenantId", errors) ? "border-red-500" : ""}>
-                <SelectValue placeholder={HOME_SETTING_FORM.TENANT_PLACEHOLDER} />
-              </SelectTrigger>
-              <SelectContent>
-                {tenantsData?.items?.map((tenant) => (
-                  <SelectItem key={tenant.id} value={tenant.id}>
-                    {tenant.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {getFieldError("tenantId", errors) && (
-              <div className="flex items-center gap-2 text-red-500 text-sm">
-                <AlertCircle className="h-4 w-4" />
-                {getFieldError("tenantId", errors)}
-              </div>
-            )}
-          </div>
-
           {/* Title Field */}
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>

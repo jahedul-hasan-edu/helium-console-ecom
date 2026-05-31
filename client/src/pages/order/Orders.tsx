@@ -3,20 +3,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PaginatedDataTable } from "@/components/PaginatedDataTable";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ActionButtons } from "@/components/ActionButtons";
 import { useCreateOrder, useDeleteOrder, useOrder, useOrders, useUpdateOrder } from "@/hooks/use-Order";
-import { useTenants } from "@/hooks/use-Tenant";
 import type { Order } from "@/models/Order";
 import { CreateOrderModal } from "@/pages/order/CreateOrderModal";
 import { DeleteOrderModal } from "@/pages/order/DeleteOrderModal";
 import { EditOrderModal } from "@/pages/order/EditOrderModal";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   BUTTON_LABELS,
   COLUMNS,
@@ -24,7 +18,6 @@ import {
   ORDERS_PAGE,
   SORTABLE_FIELDS,
   SORT_CONFIG,
-  TENANT_FILTER_ALL_VALUE,
   TOTAL_PAGES,
   type SortField,
   type SortOrder,
@@ -70,8 +63,8 @@ function getStatusBadgeProps(status: string | null) {
 }
 
 export default function Orders() {
+  const { isSuperAdmin, selectedTenantId, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTenantId, setSelectedTenantId] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<SortField>(SORTABLE_FIELDS.CREATED_ON);
@@ -81,16 +74,17 @@ export default function Orders() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const { data: tenantsData, isLoading: tenantsLoading } = useTenants({ pageSize: 1000 });
+  const activeTenantId = selectedTenantId || user?.tenantId || undefined;
+  const tenantScopeReady = !isSuperAdmin || !!activeTenantId;
   const { data: ordersData, isLoading } = useOrders({
     page: currentPage,
     pageSize,
     search: searchTerm,
     sortBy,
     sortOrder,
-    tenantId: selectedTenantId || undefined,
-  });
-  const { data: selectedOrderFromApi } = useOrder(selectedOrderId);
+    tenantId: activeTenantId,
+  }, tenantScopeReady);
+  const { data: selectedOrderFromApi } = useOrder(selectedOrderId, activeTenantId, tenantScopeReady);
 
   const selectedOrderFromList = useMemo(
     () => ordersData?.items?.find((order) => order.id === selectedOrderId),
@@ -100,10 +94,6 @@ export default function Orders() {
   const createMutation = useCreateOrder();
   const updateMutation = useUpdateOrder();
   const deleteMutation = useDeleteOrder();
-
-  const tenantNameMap = useMemo(() => {
-    return new Map((tenantsData?.items || []).map((tenant) => [tenant.id, tenant.name || tenant.id]));
-  }, [tenantsData?.items]);
 
   const columns = useMemo(
     () =>
@@ -125,7 +115,7 @@ export default function Orders() {
         if (column.key === "tenantId") {
           return {
             ...column,
-            render: (value: string | null) => tenantNameMap.get(value || "") || "Unassigned",
+            render: (value: string | null) => value || "Unassigned",
           };
         }
 
@@ -187,7 +177,7 @@ export default function Orders() {
 
         return column;
       }),
-    [tenantNameMap]
+    []
   );
 
   const handleSort = (field: keyof Order) => {
@@ -216,36 +206,20 @@ export default function Orders() {
           <h1 className="text-3xl font-bold tracking-tight">{ORDERS_PAGE.TITLE}</h1>
           <p className="mt-1 text-muted-foreground">{ORDERS_PAGE.SUBTITLE}</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+        <Button onClick={() => setShowCreateModal(true)} className="gap-2" disabled={!tenantScopeReady}>
           <Plus className="h-4 w-4" />
           {BUTTON_LABELS.ADD_ORDER}
         </Button>
       </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row">
-        <div className="w-full sm:w-56">
-          <Select
-            value={selectedTenantId || TENANT_FILTER_ALL_VALUE}
-            onValueChange={(value) => {
-              setSelectedTenantId(value === TENANT_FILTER_ALL_VALUE ? "" : value);
-              setCurrentPage(1);
-            }}
-            disabled={tenantsLoading}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={ORDERS_PAGE.TENANT_FILTER_PLACEHOLDER} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={TENANT_FILTER_ALL_VALUE}>{ORDERS_PAGE.TENANT_FILTER_PLACEHOLDER}</SelectItem>
-              {tenantsData?.items?.map((tenant) => (
-                <SelectItem key={tenant.id} value={tenant.id}>
-                  {tenant.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {!tenantScopeReady ? (
+        <Alert>
+          <AlertTitle>Select a tenant first</AlertTitle>
+          <AlertDescription>Select a tenant from the top navigation to view or create orders.</AlertDescription>
+        </Alert>
+      ) : null}
 
+      <div className="flex flex-col gap-4 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -295,6 +269,7 @@ export default function Orders() {
         isOpen={showCreateModal}
         isLoading={createMutation.isPending}
         onClose={() => setShowCreateModal(false)}
+        tenantId={activeTenantId}
         onSubmit={async (data) => {
           await createMutation.mutateAsync(data);
         }}
@@ -308,6 +283,7 @@ export default function Orders() {
           setShowEditModal(false);
           setSelectedOrderId(null);
         }}
+        tenantId={selectedOrder?.tenantId || activeTenantId}
         onSubmit={async (data) => {
           if (!selectedOrderId) {
             return;

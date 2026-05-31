@@ -1,8 +1,6 @@
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "server/db";
 import { roles } from "server/db/schemas/roles";
-import { tenantRolePagePermissions } from "server/db/schemas/tenantRolePagePermissions";
-import { tenantRolePages } from "server/db/schemas/tenantRolePages";
 import { userRoles } from "server/db/schemas/userRoles";
 import { storageUser } from "./repos/user_repo";
 import { CreateUserDTO, GetUsersOptions, GetUsersResponse, UpdateUserDTO, UserResponseDTO } from "server/shared/dtos/User";
@@ -31,7 +29,7 @@ export class UserService {
 
     if (requestedRoleId) {
       const [role] = await db
-        .select({ id: roles.id, name: roles.name })
+        .select({ id: roles.id, name: roles.name, tenantId: roles.tenantId })
         .from(roles)
         .where(and(eq(roles.id, requestedRoleId), eq(roles.isActive, true)))
         .limit(1);
@@ -41,38 +39,20 @@ export class UserService {
       }
 
       if (allowedSystemRoles.includes(role.name as RoleName)) {
+        if (role.tenantId !== null) {
+          throw new Error("Selected role is not available");
+        }
+
         return role.id;
       }
 
-      const [tenantLinkedRole] = await db
+      const [tenantOwnedRole] = await db
         .select({ id: roles.id })
         .from(roles)
-        .leftJoin(
-          tenantRolePages,
-          and(eq(tenantRolePages.roleId, roles.id), eq(tenantRolePages.tenantId, tenantId))
-        )
-        .leftJoin(
-          tenantRolePagePermissions,
-          and(eq(tenantRolePagePermissions.roleId, roles.id), eq(tenantRolePagePermissions.tenantId, tenantId))
-        )
-        .leftJoin(
-          userRoles,
-          and(eq(userRoles.roleId, roles.id), eq(userRoles.tenantId, tenantId), eq(userRoles.isActive, true))
-        )
-        .where(
-          and(
-            eq(roles.id, requestedRoleId),
-            eq(roles.isActive, true),
-            or(
-              eq(tenantRolePages.tenantId, tenantId),
-              eq(tenantRolePagePermissions.tenantId, tenantId),
-              eq(userRoles.tenantId, tenantId)
-            )
-          )
-        )
+        .where(and(eq(roles.id, requestedRoleId), eq(roles.isActive, true), eq(roles.tenantId, tenantId)))
         .limit(1);
 
-      if (!tenantLinkedRole) {
+      if (!tenantOwnedRole) {
         throw new Error("Selected role is not available for this tenant");
       }
 

@@ -3,6 +3,7 @@ export interface Role {
   name: string;
   displayName: string;
   description?: string | null;
+  tenantId?: string | null;
   isActive: boolean;
   isSystem: boolean;
   assignedUserCount: number;

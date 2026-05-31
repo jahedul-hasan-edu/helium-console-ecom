@@ -20,7 +20,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { getFieldError, ValidationError } from "@/lib/formValidator";
-import { useTenants } from "@/hooks/use-Tenant";
 import { Order, UpdateOrderRequest } from "@/models/Order";
 import {
   BUTTON_LABELS,
@@ -38,6 +37,7 @@ interface EditOrderModalProps {
   order?: Order;
   isLoading: boolean;
   onSubmit: (data: UpdateOrderRequest) => Promise<void>;
+  tenantId?: string;
 }
 
 const basicFieldConfig: Array<{
@@ -56,13 +56,16 @@ const basicFieldConfig: Array<{
   { key: "timeZone", label: ORDER_FORM.TIME_ZONE_LABEL, placeholder: ORDER_FORM.TIME_ZONE_PLACEHOLDER },
 ];
 
-function mapOrderToFormValues(order?: Order): OrderFormValues {
+function mapOrderToFormValues(order?: Order, tenantId?: string): OrderFormValues {
   if (!order) {
-    return EMPTY_ORDER_FORM;
+    return {
+      ...EMPTY_ORDER_FORM,
+      tenantId: tenantId || EMPTY_ORDER_FORM.tenantId,
+    };
   }
 
   return {
-    tenantId: order.tenantId || "",
+    tenantId: order.tenantId || tenantId || "",
     status: order.status || ORDER_STATUS_OPTIONS[0].value,
     address: order.address || "",
     mobile: order.mobile || "",
@@ -73,19 +76,18 @@ function mapOrderToFormValues(order?: Order): OrderFormValues {
   };
 }
 
-export function EditOrderModal({ isOpen, onClose, order, isLoading, onSubmit }: EditOrderModalProps) {
+export function EditOrderModal({ isOpen, onClose, order, isLoading, onSubmit, tenantId }: EditOrderModalProps) {
   const [formData, setFormData] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
   const [errors, setErrors] = useState<ValidationError[]>([]);
-  const { data: tenantsData, isLoading: tenantsLoading } = useTenants({ pageSize: 1000 });
 
   useEffect(() => {
     if (!order || !isOpen) {
       return;
     }
 
-    setFormData(mapOrderToFormValues(order));
+    setFormData(mapOrderToFormValues(order, tenantId));
     setErrors([]);
-  }, [order, isOpen]);
+  }, [order, isOpen, tenantId]);
 
   const statusOptions = useMemo(() => {
     if (!formData.status) {
@@ -123,6 +125,7 @@ export function EditOrderModal({ isOpen, onClose, order, isLoading, onSubmit }: 
     try {
       await onSubmit({
         ...formData,
+        tenantId: tenantId || formData.tenantId,
       });
 
       onClose();
@@ -147,32 +150,6 @@ export function EditOrderModal({ isOpen, onClose, order, isLoading, onSubmit }: 
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">{ORDER_FORM.TENANT_LABEL}</Label>
-              <Select
-                value={formData.tenantId}
-                disabled={isLoading || tenantsLoading}
-                onValueChange={(value) => setFieldValue("tenantId", value)}
-              >
-                <SelectTrigger className={getFieldError("tenantId", errors) ? "border-destructive focus:ring-destructive" : ""}>
-                  <SelectValue placeholder={ORDER_FORM.TENANT_PLACEHOLDER} />
-                </SelectTrigger>
-                <SelectContent>
-                  {tenantsData?.items?.map((tenant) => (
-                    <SelectItem key={tenant.id} value={tenant.id}>
-                      {tenant.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {getFieldError("tenantId", errors) ? (
-                <div className="flex items-center gap-2 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>{getFieldError("tenantId", errors)}</span>
-                </div>
-              ) : null}
-            </div>
-
             <div className="space-y-2">
               <Label className="text-sm font-medium">{ORDER_FORM.STATUS_LABEL}</Label>
               <Select

@@ -18,7 +18,7 @@ function buildOrdersUrl(basePath: string, params?: GetOrdersParams) {
   return queryString ? `${basePath}?${queryString}` : basePath;
 }
 
-export function useOrders(params?: GetOrdersParams) {
+export function useOrders(params?: GetOrdersParams, enabled: boolean = true) {
   const url = buildOrdersUrl(api.orders.list.path, params);
 
   return useQuery({
@@ -27,10 +27,11 @@ export function useOrders(params?: GetOrdersParams) {
       apiService.get<ListResponse<Order>>(url, {
         showSuccessToast: false,
       }),
+    enabled,
   });
 }
 
-export function useOrder(id: string | null, tenantId?: string | null) {
+export function useOrder(id: string | null, tenantId?: string | null, enabled: boolean = true) {
   const basePath = api.orders.get(id || "").path;
   const url = tenantId ? `${basePath}?tenantId=${encodeURIComponent(tenantId)}` : basePath;
 
@@ -40,7 +41,7 @@ export function useOrder(id: string | null, tenantId?: string | null) {
       apiService.get<Order>(url, {
         showSuccessToast: false,
       }),
-    enabled: !!id,
+    enabled: !!id && enabled,
   });
 }
 

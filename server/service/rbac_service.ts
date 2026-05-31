@@ -1,5 +1,5 @@
 import type { Request } from "express";
-import { and, asc, desc, eq, inArray, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, notInArray, or, sql } from "drizzle-orm";
 import { db } from "server/db";
 import { pages } from "server/db/schemas/pages";
 import { roles } from "server/db/schemas/roles";
@@ -95,22 +95,6 @@ export class RbacService {
     };
   }
 
-  private async getRoleIdsForTenant(tenantId: string): Promise<string[]> {
-    const [linkedRoleRows, permissionRoleRows, userRoleRows] = await Promise.all([
-      db.select({ roleId: tenantRolePages.roleId }).from(tenantRolePages).where(eq(tenantRolePages.tenantId, tenantId)),
-      db.select({ roleId: tenantRolePagePermissions.roleId }).from(tenantRolePagePermissions).where(eq(tenantRolePagePermissions.tenantId, tenantId)),
-      db.select({ roleId: userRoles.roleId }).from(userRoles).where(and(eq(userRoles.tenantId, tenantId), eq(userRoles.isActive, true))),
-    ]);
-
-    return Array.from(
-      new Set([
-        ...linkedRoleRows.map((row) => row.roleId),
-        ...permissionRoleRows.map((row) => row.roleId),
-        ...userRoleRows.map((row) => row.roleId),
-      ])
-    );
-  }
-
   private async getRoleSummary(roleId: string, tenantId: string): Promise<RoleResponseDTO> {
     const [role] = await db.select().from(roles).where(eq(roles.id, roleId)).limit(1);
     if (!role || role.name === RoleName.SUPER_ADMIN) {
@@ -133,6 +117,7 @@ export class RbacService {
       name: role.name,
       displayName: role.displayName,
       description: role.description,
+      tenantId: role.tenantId ?? null,
       isActive: role.isActive,
       isSystem: SYSTEM_ROLE_NAMES.has(role.name),
       assignedUserCount: Number(assignedUserCountRow[0]?.count || 0),
@@ -152,8 +137,7 @@ export class RbacService {
       return role;
     }
 
-    const tenantRoleIds = await this.getRoleIdsForTenant(tenantId);
-    if (!tenantRoleIds.includes(roleId)) {
+    if (role.tenantId !== tenantId) {
       throw new Error("Role not found for the current tenant");
     }
 
@@ -334,17 +318,14 @@ export class RbacService {
 
     await authService.ensureSystemSeedData();
 
-    const tenantRoleIds = await this.getRoleIdsForTenant(tenantId);
     const systemRoles = await db
       .select()
       .from(roles)
-      .where(inArray(roles.name, Array.from(TENANT_VISIBLE_SYSTEM_ROLE_NAMES)));
-    const customRoles = tenantRoleIds.length > 0
-      ? await db
-          .select()
-          .from(roles)
-          .where(and(inArray(roles.id, tenantRoleIds), notInArray(roles.name, [RoleName.SUPER_ADMIN, RoleName.TENANT_ADMIN, RoleName.USER])))
-      : [];
+      .where(and(inArray(roles.name, Array.from(TENANT_VISIBLE_SYSTEM_ROLE_NAMES)), isNull(roles.tenantId)));
+    const customRoles = await db
+      .select()
+      .from(roles)
+      .where(and(eq(roles.tenantId, tenantId), notInArray(roles.name, [RoleName.SUPER_ADMIN, RoleName.TENANT_ADMIN, RoleName.USER])));
 
     const uniqueRoles = Array.from(new Map([...systemRoles, ...customRoles].map((role) => [role.id, role])).values());
 
@@ -379,6 +360,7 @@ export class RbacService {
         name: internalName,
         displayName: payload.displayName,
         description: payload.description ?? null,
+        tenantId,
         isActive: payload.isActive ?? true,
         createdBy: user.userId,
         updatedBy: user.userId,

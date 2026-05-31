@@ -1,29 +1,22 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Search, Plus } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { useToast } from "@/hooks/use-toast";
 import { useUpdateFaq, useFaqs, useCreateFaq, useDeleteFaq } from "@/hooks/use-Faq";
-import { useTenants } from "@/hooks/use-Tenant";
 import { CreateFaqModal } from "@/pages/faq/CreateFaqModal";
 import { EditFaqModal } from "@/pages/faq/EditFaqModal";
 import { DeleteFaqModal } from "@/pages/faq/DeleteFaqModal";
 import { PaginatedDataTable } from "@/components/PaginatedDataTable";
 import { ActionButtons } from "@/components/ActionButtons";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/AuthContext";
 import { COLUMNS, FAQS_PAGE, BUTTON_LABELS, ERROR_MESSAGES, ACTION_BUTTONS, SORTABLE_FIELDS, SORT_CONFIG, type SortField, type SortOrder, TOTAL_PAGES } from "@/pages/faq";
 import type { Faq } from "@/models/Faq";
 
 export default function Faqs() {
+  const { isSuperAdmin, selectedTenantId, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTenantId, setSelectedTenantId] = useState("");
   const [currentPage, setCurrentPage] = useState(FAQS_PAGE.CURRENT_PAGE);
   const [pageSize, setPageSize] = useState(FAQS_PAGE.PAGE_SIZE_LENGTH);
   const [sortBy, setSortBy] = useState<SortField | undefined>(undefined);
@@ -35,9 +28,8 @@ export default function Faqs() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedFaqId, setSelectedFaqId] = useState<string | null>(null);
 
-  const { data: tenantsData, isLoading: tenantsLoading } = useTenants({
-    pageSize: 1000,
-  });
+  const activeTenantId = selectedTenantId || user?.tenantId || undefined;
+  const tenantScopeReady = !isSuperAdmin || !!activeTenantId;
 
   const { data: faqsData, isLoading } = useFaqs({
     page: currentPage,
@@ -45,8 +37,8 @@ export default function Faqs() {
     search: searchTerm,
     sortBy: sortBy,
     sortOrder: sortOrder,
-    tenantId: selectedTenantId,
-  } as any);
+    tenantId: activeTenantId,
+  } as any, tenantScopeReady);
 
   const selectedFaq = useMemo(
     () => faqsData?.items?.find((faq) => faq.id === selectedFaqId),
@@ -55,15 +47,9 @@ export default function Faqs() {
   const createFaqMutation = useCreateFaq();
   const updateFaqMutation = useUpdateFaq();
   const deleteFaqMutation = useDeleteFaq();
-  const { toast } = useToast();
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-    setCurrentPage(1);
-  };
-
-  const handleTenantChange = (tenantId: string) => {
-    setSelectedTenantId(tenantId);
     setCurrentPage(1);
   };
 
@@ -157,40 +143,27 @@ export default function Faqs() {
           <h1 className="text-3xl font-bold tracking-tight">{FAQS_PAGE.TITLE}</h1>
           <p className="text-muted-foreground mt-1">{FAQS_PAGE.SUBTITLE}</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+        <Button onClick={() => setShowCreateModal(true)} className="gap-2" disabled={!tenantScopeReady}>
           <Plus className="h-4 w-4" />
           {BUTTON_LABELS.ADD_FAQ}
         </Button>
       </div>
 
-      {/* Filters: Tenant Dropdown and Search */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        {/* Tenant Dropdown Filter */}
-        <div className="w-full sm:w-48">
-          <Select value={selectedTenantId} onValueChange={handleTenantChange} disabled={tenantsLoading}>
-            <SelectTrigger>
-              <SelectValue placeholder={FAQS_PAGE.TENANT_FILTER_PLACEHOLDER} />
-            </SelectTrigger>
-            <SelectContent>
-              {tenantsData?.items?.map((tenant) => (
-                <SelectItem key={tenant.id} value={tenant.id}>
-                  {tenant.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {!tenantScopeReady ? (
+        <Alert>
+          <AlertTitle>Select a tenant first</AlertTitle>
+          <AlertDescription>Select a tenant from the top navigation to view or create FAQs.</AlertDescription>
+        </Alert>
+      ) : null}
 
-        {/* Search Input */}
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={FAQS_PAGE.SEARCH_PLACEHOLDER}
-            className="pl-9"
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-          />
-        </div>
+      <div className="relative flex-1">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder={FAQS_PAGE.SEARCH_PLACEHOLDER}
+          className="pl-9"
+          value={searchTerm}
+          onChange={(e) => handleSearchChange(e.target.value)}
+        />
       </div>
 
       {/* Table with Pagination */}
@@ -219,6 +192,7 @@ export default function Faqs() {
         onClose={() => setShowCreateModal(false)}
         onSubmit={handleCreate}
         isLoading={createFaqMutation.isPending}
+        tenantId={activeTenantId}
       />
 
       <EditFaqModal
@@ -230,6 +204,7 @@ export default function Faqs() {
         onSubmit={handleUpdate}
         isLoading={updateFaqMutation.isPending}
         faq={selectedFaq}
+        tenantId={activeTenantId}
       />
 
       <DeleteFaqModal

@@ -7,7 +7,7 @@ import { tenantRolePagePermissions } from "server/db/schemas/tenantRolePagePermi
 import { tenantRolePages } from "server/db/schemas/tenantRolePages";
 import { RoleName } from "server/shared/constants";
 import { authService } from "./auth_service";
-import { STATIC_PAGE_DEFINITIONS } from "server/shared/utils/authPages";
+import { STATIC_PAGE_DEFINITIONS, SUPER_ADMIN_ONLY_PAGE_SLUGS } from "server/shared/utils/authPages";
 import type { AuthenticatedRequest } from "server/shared/utils/requestContext";
 
 export interface NavigationItem {
@@ -28,8 +28,12 @@ export interface NavigationItem {
   children?: NavigationItem[];
 }
 
-function filterNavigationItems<T extends { slug: string }>(items: T[]): T[] {
-  return items;
+function filterNavigationItems<T extends { slug: string }>(items: T[], isSuperAdmin: boolean): T[] {
+  if (isSuperAdmin) {
+    return items;
+  }
+
+  return items.filter((item) => !SUPER_ADMIN_ONLY_PAGE_SLUGS.includes(item.slug as (typeof SUPER_ADMIN_ONLY_PAGE_SLUGS)[number]));
 }
 
 function buildNavigationTree(items: NavigationItem[]): NavigationItem[] {
@@ -58,7 +62,7 @@ function buildNavigationTree(items: NavigationItem[]): NavigationItem[] {
 }
 
 function fallbackNavigation(): NavigationItem[] {
-  return filterNavigationItems(STATIC_PAGE_DEFINITIONS).map((item) => ({
+  return filterNavigationItems(STATIC_PAGE_DEFINITIONS, true).map((item) => ({
     id: item.slug,
     title: item.title,
     slug: item.slug,
@@ -96,7 +100,7 @@ export const navigationService = {
       }
 
       return buildNavigationTree(
-        filterNavigationItems(pageRows).map((page) => ({
+        filterNavigationItems(pageRows, true).map((page) => ({
           id: page.id,
           title: page.title,
           slug: page.slug,
@@ -138,7 +142,7 @@ export const navigationService = {
         .orderBy(asc(pages.sortOrder));
 
       return buildNavigationTree(
-        filterNavigationItems(rows).map((row) => ({
+        filterNavigationItems(rows, false).map((row) => ({
           ...row,
           permissions: {
             canView: true,
@@ -189,7 +193,7 @@ export const navigationService = {
       .orderBy(asc(pages.sortOrder));
 
     return buildNavigationTree(
-      filterNavigationItems(rows).map((row) => ({
+      filterNavigationItems(rows, false).map((row) => ({
         id: row.id,
         title: row.title,
         slug: row.slug,

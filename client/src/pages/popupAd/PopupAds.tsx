@@ -2,13 +2,6 @@ import { useState, useMemo } from "react";
 import { PaginatedDataTable } from "@/components/PaginatedDataTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ActionButtons } from "@/components/ActionButtons";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -18,7 +11,6 @@ import {
   useDeletePopupAd,
   usePopupAd,
 } from "@/hooks/use-PopupAd";
-import { useTenants } from "@/hooks/use-Tenant";
 import { CreatePopupAdModal } from "./CreatePopupAdModal";
 import { EditPopupAdModal } from "./EditPopupAdModal";
 import { DeletePopupAdModal } from "./DeletePopupAdModal";
@@ -36,14 +28,15 @@ import {
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PopupAd, CreatePopupAdRequest, UpdatePopupAdRequest } from "@/models/PopupAd";
-import { Tenant } from "@/models/Tenant";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function PopupAds() {
   const { toast } = useToast();
+  const { isSuperAdmin, selectedTenantId, user } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTenantId, setSelectedTenantId] = useState("");
   const [sortBy, setSortBy] = useState<SortField | undefined>(undefined);
   const [sortOrder, setSortOrder] = useState<SortOrder | undefined>(undefined);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -53,9 +46,8 @@ export default function PopupAds() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-  const { data: tenantsData, isLoading: tenantsLoading } = useTenants({
-      pageSize: 1000,
-    });
+  const activeTenantId = selectedTenantId || user?.tenantId || undefined;
+  const tenantScopeReady = !isSuperAdmin || !!activeTenantId;
 
   // Data fetching hooks
   const { data: popupAdsData, isLoading } = usePopupAds({
@@ -64,9 +56,10 @@ export default function PopupAds() {
     search: searchTerm,
     sortBy,
     sortOrder,
-  });
+    tenantId: activeTenantId,
+  } as any, tenantScopeReady);
 
-  const { data: selectedPopupAdData } = usePopupAd(selectedId);
+  const { data: selectedPopupAdData } = usePopupAd(selectedId, tenantScopeReady);
 
   // Mutations
   const createMutation = useCreatePopupAd();
@@ -76,11 +69,6 @@ export default function PopupAds() {
   // Handlers
   const handleSearch = (value: string) => {
     setSearchTerm(value);
-    setCurrentPage(1);
-  };
-
-  const handleTenantChange = (value: string) => {
-    setSelectedTenantId(value);
     setCurrentPage(1);
   };
 
@@ -217,28 +205,21 @@ export default function PopupAds() {
             onClick={() => setIsCreateModalOpen(true)}
             className="gap-2"
             size="lg"
+            disabled={!tenantScopeReady}
           >
             <Plus className="h-4 w-4" />
             {BUTTON_LABELS.add}
           </Button>
         </div>
 
-          {/* Tenant Filter and Search */}
+          {!tenantScopeReady ? (
+            <Alert>
+              <AlertTitle>Select a tenant first</AlertTitle>
+              <AlertDescription>Select a tenant from the top navigation to view or create popup ads.</AlertDescription>
+            </Alert>
+          ) : null}
+
           <div className="flex gap-4 flex-wrap">
-            <div className="flex-1 min-w-[200px]">
-              <Select value={selectedTenantId} onValueChange={handleTenantChange}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Filter by Tenant" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tenantsData?.items?.map((tenant: Tenant) => (
-                    <SelectItem key={tenant.id} value={tenant.id}>
-                      {tenant.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <div className="flex-1 min-w-[200px]">
               <Input
                 placeholder={POPUP_AD_PAGE.searchPlaceholder}
@@ -275,6 +256,7 @@ export default function PopupAds() {
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateSubmit}
         isLoading={createMutation.isPending}
+        tenantId={activeTenantId}
       />
 
       <EditPopupAdModal
@@ -286,6 +268,7 @@ export default function PopupAds() {
         onSubmit={handleUpdateSubmit}
         isLoading={updateMutation.isPending}
         popupAd={selectedPopupAdData as PopupAd | undefined}
+        tenantId={selectedPopupAdData?.tenantId || activeTenantId}
       />
 
       <DeletePopupAdModal
