@@ -236,16 +236,28 @@ export class AuthService {
   }
 
   async ensureSystemSeedData(): Promise<void> {
-    const existingRoles = await db.select({ name: roles.name }).from(roles);
+    const existingRoles = await db.select({ id: roles.id, name: roles.name, type: roles.type }).from(roles);
     const existingRoleNames = new Set(existingRoles.map((role) => role.name));
     const missingRoles = [
-      { name: RoleName.SUPER_ADMIN, displayName: "Super Admin", description: "Full system control" },
-      { name: RoleName.TENANT_ADMIN, displayName: "Tenant Admin", description: "Controls a single tenant" },
-      { name: RoleName.USER, displayName: "User", description: "Permission-driven tenant user" },
+      { name: RoleName.SUPER_ADMIN, type: "system", displayName: "Super Admin", description: "Full system control" },
+      { name: RoleName.TENANT_ADMIN, type: "system", displayName: "Tenant Admin", description: "Controls a single tenant" },
+      { name: RoleName.USER, type: "system", displayName: "User", description: "Permission-driven tenant user" },
     ].filter((role) => !existingRoleNames.has(role.name));
 
     if (missingRoles.length > 0) {
       await db.insert(roles).values(missingRoles);
+    }
+
+    const systemRoleIdsNeedingTypeUpdate = existingRoles
+      .filter(
+        (role) =>
+          [RoleName.SUPER_ADMIN, RoleName.TENANT_ADMIN, RoleName.USER].includes(role.name as RoleName) &&
+          role.type !== "system"
+      )
+      .map((role) => role.id);
+
+    if (systemRoleIdsNeedingTypeUpdate.length > 0) {
+      await db.update(roles).set({ type: "system" }).where(inArray(roles.id, systemRoleIdsNeedingTypeUpdate));
     }
 
     const existingPages = await db

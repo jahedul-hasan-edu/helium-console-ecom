@@ -3,6 +3,7 @@ import { z } from "zod";
 export const roleResponseSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
+  type: z.enum(["system", "custom"]),
   displayName: z.string(),
   description: z.string().nullable().optional(),
   tenantId: z.string().uuid().nullable().optional(),

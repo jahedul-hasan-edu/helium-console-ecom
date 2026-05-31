@@ -52,7 +52,7 @@ export const homeSettingService = {
     // Create the home setting
     const homeSetting = await storageHomeSetting.createHomeSetting({ ...data, tenantId, userIp });
     
-    console.log("req.files:", (req as any).files);
+    // console.log("req.files:", (req as any).files);
     // Handle image uploads if files are provided
     if ((req as any).files && Array.isArray((req as any).files)) {
       const files = (req as any).files as Express.Multer.File[];

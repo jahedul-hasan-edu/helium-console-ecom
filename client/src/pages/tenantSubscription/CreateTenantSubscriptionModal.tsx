@@ -112,18 +112,18 @@ export function CreateTenantSubscriptionModal({
     setValidationErrors(result.errors);
 
     if (!result.isValid) {
-      console.log("Form validation failed:", result.errors);
+      // console.log("Form validation failed:", result.errors);
       return;
     }
 
     try {
-      console.log("Submitting tenant subscription:", {
-        tenantId,
-        planId,
-        startDate,
-        endDate,
-        isActive,
-      });
+      // console.log("Submitting tenant subscription:", {
+      //   tenantId,
+      //   planId,
+      //   startDate,
+      //   endDate,
+      //   isActive,
+      // });
       await createMutation.mutateAsync({
         tenantId,
         planId,
@@ -131,7 +131,7 @@ export function CreateTenantSubscriptionModal({
         endDate,
         isActive,
       });
-      console.log("Tenant subscription created successfully");
+      // console.log("Tenant subscription created successfully");
       onClose();
     } catch (error) {
       console.error("Error creating tenant subscription:", error);
@@ -155,15 +155,15 @@ export function CreateTenantSubscriptionModal({
 
   // Debug logging
   useEffect(() => {
-    console.log("Form state:", {
-      tenantId,
-      planId,
-      startDate,
-      endDate,
-      isActive,
-      isFormValid,
-      errors: validationErrors,
-    });
+    // console.log("Form state:", {
+    //   tenantId,
+    //   planId,
+    //   startDate,
+    //   endDate,
+    //   isActive,
+    //   isFormValid,
+    //   errors: validationErrors,
+    // });
   }, [tenantId, planId, startDate, endDate, isActive, isFormValid, validationErrors]);
 
   return (
@@ -367,7 +367,7 @@ export function CreateTenantSubscriptionModal({
           </Button>
           <Button
             onClick={() => {
-              console.log("Create button clicked, isFormValid:", isFormValid);
+              // console.log("Create button clicked, isFormValid:", isFormValid);
               handleSubmit();
             }}
             disabled={!isFormValid || createMutation.isPending}

@@ -7,6 +7,7 @@ export const roles = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
+    type: text("type").notNull().default("custom"),
     displayName: text("display_name").notNull(),
     description: text("description"),
     tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),

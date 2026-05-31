@@ -1,6 +1,7 @@
 export interface Role {
   id: string;
   name: string;
+  type: "system" | "custom";
   displayName: string;
   description?: string | null;
   tenantId?: string | null;

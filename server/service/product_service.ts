@@ -47,7 +47,7 @@ export const productService = {
     // Create the product
     const product = await storageProduct.createProduct({ ...data, tenantId, userIp });
     
-    console.log("req.files:", (req as any).files);
+    // console.log("req.files:", (req as any).files);
     // Handle image uploads if files are provided
     if ((req as any).files && Array.isArray((req as any).files)) {
       const files = (req as any).files as Express.Multer.File[];

@@ -61,8 +61,8 @@ export class EmailService {
   private static async sendMail(payload: EmailPayload): Promise<void> {
     const transporter = this.getTransporter();
     if (!transporter) {
-      console.warn("[EmailService] SMTP is not configured. Set NEXT_PUBLIC_SMTP_HOST, NEXT_PUBLIC_SMTP_PORT, NEXT_PUBLIC_SMTP_SECURE, NEXT_PUBLIC_SMTP_USER, and NEXT_PUBLIC_SMTP_PASS.");
-      console.log(`[EmailService] Email fallback (not sent) to ${payload.to} | subject: ${payload.subject} | text: ${payload.text}`);
+      // console.warn("[EmailService] SMTP is not configured. Set NEXT_PUBLIC_SMTP_HOST, NEXT_PUBLIC_SMTP_PORT, NEXT_PUBLIC_SMTP_SECURE, NEXT_PUBLIC_SMTP_USER, and NEXT_PUBLIC_SMTP_PASS.");
+      // console.log(`[EmailService] Email fallback (not sent) to ${payload.to} | subject: ${payload.subject} | text: ${payload.text}`);
       return;
     }
 
